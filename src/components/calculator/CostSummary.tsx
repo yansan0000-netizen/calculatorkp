@@ -1,21 +1,27 @@
 import { useCalculator } from "@/context/CalculatorContext";
-import { products } from "@/data/calculatorData";
+import { calculatePrice } from "@/data/calculatorData";
 import { Checkbox } from "@/components/ui/checkbox";
 
 const CostSummary = () => {
-  const { selectedProducts, toggleProduct } = useCalculator();
+  const {
+    selectedProducts, toggleProduct, products,
+    dimensionX, dimensionY, dimensionL, roofAngle,
+    metalCoating, coatingMultipliers,
+  } = useCalculator();
+
+  const coatMult = coatingMultipliers[metalCoating] ?? 1;
 
   const getPrice = (productId: string) => {
     if (!selectedProducts.includes(productId)) return 0;
     const product = products.find((p) => p.id === productId);
-    return product?.basePrice ?? 0;
+    if (!product) return 0;
+    return calculatePrice(product, dimensionX, dimensionY, dimensionL, roofAngle, coatMult);
   };
 
   const totalPrice = products.reduce((sum, p) => sum + getPrice(p.id), 0);
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("ru-RU").format(price) + " руб";
-  };
+  const formatPrice = (price: number) =>
+    new Intl.NumberFormat("ru-RU").format(price) + " руб";
 
   return (
     <div className="bg-card rounded-lg border border-border p-6">
@@ -42,7 +48,7 @@ const CostSummary = () => {
                   {product.name} ({product.description})
                 </span>
               </label>
-              <span className={`text-sm font-medium min-w-[100px] text-right ${isSelected ? "text-primary" : "text-primary"}`}>
+              <span className="text-sm font-medium min-w-[100px] text-right text-primary">
                 {formatPrice(price)}
               </span>
             </div>
