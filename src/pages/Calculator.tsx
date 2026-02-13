@@ -7,7 +7,7 @@ import DimensionsForm from "@/components/calculator/DimensionsForm";
 import AdditionalOptions from "@/components/calculator/AdditionalOptions";
 import CostSummary from "@/components/calculator/CostSummary";
 import { Link } from "react-router-dom";
-import { Settings, FileDown, Building2 } from "lucide-react";
+import { Settings, FileDown, Building2, MessageSquare } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { generateCommercialPdf } from "@/utils/generatePdf";
 import { toast } from "@/hooks/use-toast";
@@ -55,17 +55,15 @@ const Calculator = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-card border-b border-border">
-        <div className="container max-w-5xl py-6">
+      <div className="gradient-header">
+        <div className="container max-w-5xl py-8">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                КАЛЬКУЛЯТОР СИСТЕМЫ PIPE
-              </h1>
-            </div>
+            <h1 className="text-3xl font-extrabold tracking-tight text-primary-foreground">
+              КАЛЬКУЛЯТОР СИСТЕМЫ PIPE
+            </h1>
             <Link
               to="/settings"
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="flex items-center gap-2 text-sm text-primary-foreground/80 hover:text-primary-foreground transition-colors bg-white/10 rounded-full px-4 py-2"
             >
               <Settings className="w-4 h-4" />
               Настройки
@@ -75,9 +73,9 @@ const Calculator = () => {
       </div>
 
       {/* Main Content */}
-      <div className="container max-w-5xl py-8 space-y-8">
+      <div className="container max-w-5xl py-8 space-y-6">
         {/* Top Section: Product Selection + Dimensions */}
-        <div className="bg-card rounded-lg border border-border p-6">
+        <div className="card-soft p-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <ProductSelection />
             <DimensionsForm />
@@ -85,20 +83,23 @@ const Calculator = () => {
         </div>
 
         {/* Additional Options */}
-        <div className="bg-card rounded-lg border border-border p-6">
+        <div className="card-soft p-8">
           <AdditionalOptions />
         </div>
 
         {/* Comment */}
-        <div className="bg-card rounded-lg border border-border p-6 space-y-3">
-          <label className="text-sm font-medium text-foreground">
-            Необходим комментарий? Вот сюда, пожалуйста:
-          </label>
+        <div className="card-soft p-8 space-y-3">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="w-5 h-5 text-primary" />
+            <label className="text-sm font-bold text-foreground">
+              Комментарий к заказу
+            </label>
+          </div>
           <Textarea
             placeholder="Введите комментарий сюда"
             value={comment}
             onChange={(e) => setComment(e.target.value)}
-            className="bg-muted border-0 resize-none"
+            className="bg-muted border-0 resize-none rounded-xl"
             rows={3}
           />
         </div>
@@ -107,47 +108,47 @@ const Calculator = () => {
         <CostSummary />
 
         {/* Company Info for PDF */}
-        <div className="bg-card rounded-lg border border-border p-6 space-y-4">
+        <div className="card-soft p-8 space-y-4">
           <div className="flex items-center gap-2 mb-2">
             <Building2 className="w-5 h-5 text-primary" />
-            <h3 className="text-lg font-semibold text-foreground">Данные для КП</h3>
+            <h3 className="text-lg font-bold text-foreground">Данные для КП</h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <Input
               placeholder="Название компании"
               value={company.companyName}
               onChange={(e) => setCompany((c) => ({ ...c, companyName: e.target.value }))}
-              className="bg-muted border-0"
+              className="bg-muted border-0 rounded-xl"
             />
             <Input
               placeholder="Контактное лицо"
               value={company.contactPerson}
               onChange={(e) => setCompany((c) => ({ ...c, contactPerson: e.target.value }))}
-              className="bg-muted border-0"
+              className="bg-muted border-0 rounded-xl"
             />
             <Input
               placeholder="Телефон"
               type="tel"
               value={company.phone}
               onChange={(e) => setCompany((c) => ({ ...c, phone: e.target.value }))}
-              className="bg-muted border-0"
+              className="bg-muted border-0 rounded-xl"
             />
             <Input
               placeholder="Email"
               type="email"
               value={company.email}
               onChange={(e) => setCompany((c) => ({ ...c, email: e.target.value }))}
-              className="bg-muted border-0"
+              className="bg-muted border-0 rounded-xl"
             />
           </div>
         </div>
 
         {/* PDF Export */}
-        <div className="flex justify-center">
+        <div className="flex justify-center pb-8">
           <Button
             onClick={handleExportPdf}
             disabled={pdfLoading}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 py-6 px-8 text-lg font-semibold rounded-lg"
+            className="gradient-accent text-accent-foreground hover:opacity-90 py-7 px-10 text-lg font-extrabold rounded-full shadow-lg transition-all hover:shadow-xl hover:scale-[1.02]"
           >
             <FileDown className="w-5 h-5 mr-2" />
             {pdfLoading ? "Генерация..." : "СКАЧАТЬ КП (PDF)"}
