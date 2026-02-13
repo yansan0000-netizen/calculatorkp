@@ -68,10 +68,10 @@ const Calculator = () => {
         {/* Cost Summary */}
         <CostSummary />
 
-        {/* Invoice Form */}
-        <div className="bg-card rounded-lg border border-border p-6">
+        {/* Invoice Form - hidden, PDF export planned */}
+        {/* <div className="bg-card rounded-lg border border-border p-6">
           <InvoiceForm />
-        </div>
+        </div> */}
       </div>
     </div>
   );
