@@ -60,11 +60,8 @@ const Calculator = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                FOR SYSTEM PIPE ЕВРОПА 2024
+                КАЛЬКУЛЯТОР СИСТЕМЫ PIPE
               </h1>
-              <p className="text-sm text-warning mt-1 italic">
-                обратите внимание: некоторые металлы могут быть недоступны
-              </p>
             </div>
             <Link
               to="/settings"
