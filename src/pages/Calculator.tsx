@@ -7,14 +7,23 @@ import DimensionsForm from "@/components/calculator/DimensionsForm";
 import AdditionalOptions from "@/components/calculator/AdditionalOptions";
 import CostSummary from "@/components/calculator/CostSummary";
 import { Link } from "react-router-dom";
-import { Settings, FileDown } from "lucide-react";
+import { Settings, FileDown, Building2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { generateCommercialPdf } from "@/utils/generatePdf";
 import { toast } from "@/hooks/use-toast";
+
+import type { CompanyInfo } from "@/utils/generatePdf";
 
 const Calculator = () => {
   const calc = useCalculator();
   const { comment, setComment } = calc;
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [company, setCompany] = useState<CompanyInfo>({
+    companyName: "",
+    contactPerson: "",
+    phone: "",
+    email: "",
+  });
 
   const handleExportPdf = async () => {
     setPdfLoading(true);
@@ -33,6 +42,7 @@ const Calculator = () => {
         roofMaterial: calc.roofMaterial,
         coatingMultiplier: calc.coatingMultipliers[calc.metalCoating] ?? 1,
         comment: calc.comment,
+        company,
       });
       toast({ title: "PDF сохранён" });
     } catch {
@@ -98,6 +108,42 @@ const Calculator = () => {
 
         {/* Cost Summary */}
         <CostSummary />
+
+        {/* Company Info for PDF */}
+        <div className="bg-card rounded-lg border border-border p-6 space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Building2 className="w-5 h-5 text-primary" />
+            <h3 className="text-lg font-semibold text-foreground">Данные для КП</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <Input
+              placeholder="Название компании"
+              value={company.companyName}
+              onChange={(e) => setCompany((c) => ({ ...c, companyName: e.target.value }))}
+              className="bg-muted border-0"
+            />
+            <Input
+              placeholder="Контактное лицо"
+              value={company.contactPerson}
+              onChange={(e) => setCompany((c) => ({ ...c, contactPerson: e.target.value }))}
+              className="bg-muted border-0"
+            />
+            <Input
+              placeholder="Телефон"
+              type="tel"
+              value={company.phone}
+              onChange={(e) => setCompany((c) => ({ ...c, phone: e.target.value }))}
+              className="bg-muted border-0"
+            />
+            <Input
+              placeholder="Email"
+              type="email"
+              value={company.email}
+              onChange={(e) => setCompany((c) => ({ ...c, email: e.target.value }))}
+              className="bg-muted border-0"
+            />
+          </div>
+        </div>
 
         {/* PDF Export */}
         <div className="flex justify-center">
