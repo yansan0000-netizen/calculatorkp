@@ -2,6 +2,13 @@ import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { Product, calculatePrice } from "@/data/calculatorData";
 
+export interface CompanyInfo {
+  companyName: string;
+  contactPerson: string;
+  phone: string;
+  email: string;
+}
+
 interface PdfData {
   products: Product[];
   selectedProducts: string[];
@@ -16,6 +23,7 @@ interface PdfData {
   roofMaterial: string;
   coatingMultiplier: number;
   comment: string;
+  company: CompanyInfo;
 }
 
 export async function generateCommercialPdf(data: PdfData) {
@@ -45,12 +53,23 @@ export async function generateCommercialPdf(data: PdfData) {
 
   const total = rows.reduce((s, r) => s + r.price, 0);
 
+  const co = data.company;
+  const hasCompany = co.companyName || co.contactPerson || co.phone || co.email;
+
   container.innerHTML = `
     <div style="text-align:center;margin-bottom:24px">
       <h1 style="font-size:22px;margin:0;font-weight:700">КОММЕРЧЕСКОЕ ПРЕДЛОЖЕНИЕ</h1>
       <p style="font-size:13px;color:#666;margin:6px 0 0">FOR SYSTEM PIPE ЕВРОПА 2024</p>
       <p style="font-size:12px;color:#999;margin:4px 0 0">Дата: ${new Date().toLocaleDateString("ru-RU")}</p>
     </div>
+
+    ${hasCompany ? `
+    <div style="background:#f8f8f8;border:1px solid #e0e0e0;border-radius:6px;padding:14px 18px;margin-bottom:20px;font-size:13px">
+      ${co.companyName ? `<div style="font-weight:700;font-size:15px;margin-bottom:6px">${co.companyName}</div>` : ""}
+      ${co.contactPerson ? `<div style="color:#444">Контактное лицо: ${co.contactPerson}</div>` : ""}
+      ${co.phone ? `<div style="color:#444">Тел: ${co.phone}</div>` : ""}
+      ${co.email ? `<div style="color:#444">Email: ${co.email}</div>` : ""}
+    </div>` : ""}
 
     <h3 style="font-size:14px;margin:20px 0 8px;border-bottom:1px solid #ddd;padding-bottom:6px">
       Параметры конфигурации
