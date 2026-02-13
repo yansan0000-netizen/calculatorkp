@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Calculator from "./pages/Calculator";
 import SettingsPage from "./pages/Settings";
+import HistoryPage from "./pages/History";
 import NotFound from "./pages/NotFound";
 import { CalculatorProvider } from "./context/CalculatorContext";
 
@@ -20,6 +21,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Calculator />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/history" element={<HistoryPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

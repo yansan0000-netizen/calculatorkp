@@ -7,10 +7,12 @@ import DimensionsForm from "@/components/calculator/DimensionsForm";
 import AdditionalOptions from "@/components/calculator/AdditionalOptions";
 import CostSummary from "@/components/calculator/CostSummary";
 import { Link } from "react-router-dom";
-import { Settings, FileDown, Building2, MessageSquare } from "lucide-react";
+import { Settings, FileDown, Building2, MessageSquare, History } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { generateCommercialPdf } from "@/utils/generatePdf";
 import { toast } from "@/hooks/use-toast";
+import { saveToHistory } from "@/pages/History";
+import { calculatePrice } from "@/data/calculatorData";
 
 import type { CompanyInfo } from "@/utils/generatePdf";
 
@@ -28,7 +30,7 @@ const Calculator = () => {
   const handleExportPdf = async () => {
     setPdfLoading(true);
     try {
-      await generateCommercialPdf({
+      const pdfData = {
         products: calc.products,
         selectedProducts: calc.selectedProducts,
         dimensionX: calc.dimensionX,
@@ -43,7 +45,27 @@ const Calculator = () => {
         coatingMultiplier: calc.coatingMultipliers[calc.metalCoating] ?? 1,
         comment: calc.comment,
         company,
+      };
+      await generateCommercialPdf(pdfData);
+
+      // Save to history
+      const selected = calc.products.filter((p) => calc.selectedProducts.includes(p.id));
+      const total = selected.reduce(
+        (s, p) =>
+          s +
+          calculatePrice(p, calc.dimensionX, calc.dimensionY, calc.dimensionL, calc.roofAngle, pdfData.coatingMultiplier),
+        0
+      );
+      saveToHistory({
+        id: Date.now().toString(),
+        date: new Date().toLocaleString("ru-RU"),
+        companyName: company.companyName,
+        contactPerson: company.contactPerson,
+        totalPrice: total,
+        selectedProductNames: selected.map((p) => p.name),
+        pdfData,
       });
+
       toast({ title: "PDF сохранён" });
     } catch {
       toast({ title: "Ошибка генерации PDF", variant: "destructive" });
@@ -61,13 +83,22 @@ const Calculator = () => {
             <h1 className="text-3xl font-extrabold tracking-tight text-primary-foreground">
               КАЛЬКУЛЯТОР СИСТЕМЫ PIPE
             </h1>
-            <Link
-              to="/settings"
-              className="flex items-center gap-2 text-sm text-primary-foreground/80 hover:text-primary-foreground transition-colors bg-white/10 rounded-full px-4 py-2"
-            >
-              <Settings className="w-4 h-4" />
-              Настройки
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                to="/history"
+                className="flex items-center gap-2 text-sm text-primary-foreground/80 hover:text-primary-foreground transition-colors bg-white/10 rounded-full px-4 py-2"
+              >
+                <History className="w-4 h-4" />
+                История
+              </Link>
+              <Link
+                to="/settings"
+                className="flex items-center gap-2 text-sm text-primary-foreground/80 hover:text-primary-foreground transition-colors bg-white/10 rounded-full px-4 py-2"
+              >
+                <Settings className="w-4 h-4" />
+                Настройки
+              </Link>
+            </div>
           </div>
         </div>
       </div>
