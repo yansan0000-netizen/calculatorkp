@@ -7,8 +7,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { roofAngles, metalCoatings, metalColors } from "@/data/calculatorData";
-
 const DimensionsForm = () => {
   const {
     dimensionX, setDimensionX,
@@ -17,6 +15,7 @@ const DimensionsForm = () => {
     roofAngle, setRoofAngle,
     metalCoating, setMetalCoating,
     metalColor, setMetalColor,
+    roofAngles, metalCoatings, metalColors,
   } = useCalculator();
 
   return (

@@ -1,9 +1,46 @@
 import React, { createContext, useContext, useState, ReactNode } from "react";
+import {
+  Product,
+  defaultProducts,
+  defaultRoofAngles,
+  defaultMetalCoatings,
+  defaultMetalColors,
+  defaultCapCollections,
+  defaultDesignBypasses,
+  defaultRoofMaterials,
+  defaultCoatingMultipliers,
+} from "@/data/calculatorData";
+
+interface MetalColor {
+  code: string;
+  name: string;
+}
 
 interface CalculatorState {
   // Product selections
   selectedProducts: string[];
   toggleProduct: (id: string) => void;
+
+  // Editable product list & prices
+  products: Product[];
+  setProducts: (p: Product[]) => void;
+  updateProductPrice: (id: string, price: number) => void;
+
+  // Editable dropdown lists
+  roofAngles: number[];
+  setRoofAngles: (v: number[]) => void;
+  metalCoatings: string[];
+  setMetalCoatings: (v: string[]) => void;
+  metalColors: MetalColor[];
+  setMetalColors: (v: MetalColor[]) => void;
+  capCollections: string[];
+  setCapCollections: (v: string[]) => void;
+  designBypasses: string[];
+  setDesignBypasses: (v: string[]) => void;
+  roofMaterials: string[];
+  setRoofMaterials: (v: string[]) => void;
+  coatingMultipliers: Record<string, number>;
+  setCoatingMultipliers: (v: Record<string, number>) => void;
 
   // Dimensions
   dimensionX: number;
@@ -40,6 +77,15 @@ export const useCalculator = () => {
 
 export const CalculatorProvider = ({ children }: { children: ReactNode }) => {
   const [selectedProducts, setSelectedProducts] = useState<string[]>(["austria", "germany", "britain"]);
+  const [products, setProducts] = useState<Product[]>(defaultProducts);
+  const [roofAnglesState, setRoofAngles] = useState(defaultRoofAngles);
+  const [metalCoatingsState, setMetalCoatings] = useState(defaultMetalCoatings);
+  const [metalColorsState, setMetalColors] = useState(defaultMetalColors);
+  const [capCollectionsState, setCapCollections] = useState(defaultCapCollections);
+  const [designBypassesState, setDesignBypasses] = useState(defaultDesignBypasses);
+  const [roofMaterialsState, setRoofMaterials] = useState(defaultRoofMaterials);
+  const [coatingMultipliers, setCoatingMultipliers] = useState(defaultCoatingMultipliers);
+
   const [dimensionX, setDimensionX] = useState(100);
   const [dimensionY, setDimensionY] = useState(200);
   const [dimensionL, setDimensionL] = useState(100);
@@ -57,10 +103,22 @@ export const CalculatorProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
+  const updateProductPrice = (id: string, price: number) => {
+    setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, basePrice: price } : p)));
+  };
+
   return (
     <CalculatorContext.Provider
       value={{
         selectedProducts, toggleProduct,
+        products, setProducts, updateProductPrice,
+        roofAngles: roofAnglesState, setRoofAngles,
+        metalCoatings: metalCoatingsState, setMetalCoatings,
+        metalColors: metalColorsState, setMetalColors,
+        capCollections: capCollectionsState, setCapCollections,
+        designBypasses: designBypassesState, setDesignBypasses,
+        roofMaterials: roofMaterialsState, setRoofMaterials,
+        coatingMultipliers, setCoatingMultipliers,
         dimensionX, setDimensionX,
         dimensionY, setDimensionY,
         dimensionL, setDimensionL,

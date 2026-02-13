@@ -1,5 +1,4 @@
 import { useCalculator } from "@/context/CalculatorContext";
-import { products } from "@/data/calculatorData";
 import { Checkbox } from "@/components/ui/checkbox";
 
 const ProductSelection = () => {

@@ -6,13 +6,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { capCollections, designBypasses, roofMaterials } from "@/data/calculatorData";
-
 const AdditionalOptions = () => {
   const {
     capCollection, setCapCollection,
     designBypass, setDesignBypass,
     roofMaterial, setRoofMaterial,
+    capCollections, designBypasses, roofMaterials,
   } = useCalculator();
 
   return (
