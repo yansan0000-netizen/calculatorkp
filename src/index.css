@@ -6,40 +6,40 @@
 
 @layer base {
   :root {
-    --background: 260 30% 96%;
-    --foreground: 260 25% 12%;
+    --background: 220 20% 96%;
+    --foreground: 220 30% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 260 25% 12%;
+    --card-foreground: 220 30% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 260 25% 12%;
+    --popover-foreground: 220 30% 12%;
 
-    --primary: 262 72% 55%;
+    --primary: 220 65% 38%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 260 30% 94%;
-    --secondary-foreground: 260 25% 20%;
+    --secondary: 220 20% 94%;
+    --secondary-foreground: 220 30% 18%;
 
-    --muted: 260 20% 93%;
-    --muted-foreground: 260 10% 45%;
+    --muted: 220 16% 93%;
+    --muted-foreground: 220 10% 46%;
 
-    --accent: 170 65% 45%;
+    --accent: 38 75% 50%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 155 65% 42%;
+    --success: 155 55% 38%;
     --success-foreground: 0 0% 100%;
 
     --warning: 38 92% 50%;
 
-    --border: 260 18% 88%;
-    --input: 260 18% 91%;
-    --ring: 262 72% 55%;
+    --border: 220 16% 88%;
+    --input: 220 16% 91%;
+    --ring: 220 65% 38%;
 
-    --radius: 1rem;
+    --radius: 0.75rem;
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -48,7 +48,7 @@
     --sidebar-accent: 240 4.8% 95.9%;
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 262 72% 55%;
+    --sidebar-ring: 220 65% 38%;
   }
 }
 
@@ -65,10 +65,10 @@
 
 @layer utilities {
   .gradient-header {
-    background: linear-gradient(135deg, hsl(262, 72%, 55%) 0%, hsl(280, 65%, 60%) 50%, hsl(262, 72%, 45%) 100%);
+    background: linear-gradient(135deg, hsl(220, 65%, 28%) 0%, hsl(220, 55%, 38%) 50%, hsl(215, 50%, 32%) 100%);
   }
   .gradient-accent {
-    background: linear-gradient(135deg, hsl(170, 65%, 45%) 0%, hsl(170, 65%, 55%) 100%);
+    background: linear-gradient(135deg, hsl(38, 75%, 48%) 0%, hsl(32, 80%, 52%) 100%);
   }
   .card-soft {
     @apply bg-card rounded-2xl border border-border shadow-sm;
