@@ -1,15 +1,46 @@
+import { useState } from "react";
 import { useCalculator } from "@/context/CalculatorContext";
 import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import ProductSelection from "@/components/calculator/ProductSelection";
 import DimensionsForm from "@/components/calculator/DimensionsForm";
 import AdditionalOptions from "@/components/calculator/AdditionalOptions";
 import CostSummary from "@/components/calculator/CostSummary";
-import InvoiceForm from "@/components/calculator/InvoiceForm";
 import { Link } from "react-router-dom";
-import { Settings } from "lucide-react";
+import { Settings, FileDown } from "lucide-react";
+import { generateCommercialPdf } from "@/utils/generatePdf";
+import { toast } from "@/hooks/use-toast";
 
 const Calculator = () => {
-  const { comment, setComment } = useCalculator();
+  const calc = useCalculator();
+  const { comment, setComment } = calc;
+  const [pdfLoading, setPdfLoading] = useState(false);
+
+  const handleExportPdf = async () => {
+    setPdfLoading(true);
+    try {
+      await generateCommercialPdf({
+        products: calc.products,
+        selectedProducts: calc.selectedProducts,
+        dimensionX: calc.dimensionX,
+        dimensionY: calc.dimensionY,
+        dimensionL: calc.dimensionL,
+        roofAngle: calc.roofAngle,
+        metalCoating: calc.metalCoating,
+        metalColor: calc.metalColor,
+        capCollection: calc.capCollection,
+        designBypass: calc.designBypass,
+        roofMaterial: calc.roofMaterial,
+        coatingMultiplier: calc.coatingMultipliers[calc.metalCoating] ?? 1,
+        comment: calc.comment,
+      });
+      toast({ title: "PDF сохранён" });
+    } catch {
+      toast({ title: "Ошибка генерации PDF", variant: "destructive" });
+    } finally {
+      setPdfLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -68,10 +99,17 @@ const Calculator = () => {
         {/* Cost Summary */}
         <CostSummary />
 
-        {/* Invoice Form - hidden, PDF export planned */}
-        {/* <div className="bg-card rounded-lg border border-border p-6">
-          <InvoiceForm />
-        </div> */}
+        {/* PDF Export */}
+        <div className="flex justify-center">
+          <Button
+            onClick={handleExportPdf}
+            disabled={pdfLoading}
+            className="bg-primary text-primary-foreground hover:bg-primary/90 py-6 px-8 text-lg font-semibold rounded-lg"
+          >
+            <FileDown className="w-5 h-5 mr-2" />
+            {pdfLoading ? "Генерация..." : "СКАЧАТЬ КП (PDF)"}
+          </Button>
+        </div>
       </div>
     </div>
   );
