@@ -100,9 +100,9 @@ export function calcBoxPrice(model: BoxModel, X: number, Y: number, H: number, m
   switch (model) {
     case "none": return 0;
     case "smooth":
-      return ((X * Y * 0.0025 + 2500) + (X + Y) * 0.002 * H * metalPrice) * 2;
+      return ((X * Y * 0.0025 + 2500) + (X + Y) * 0.002 * (H * 0.001) * metalPrice) * 2;
     case "lamellar":
-      return ((X * Y * 0.0025 + 2500) * 2 + (X + Y) * 0.002 * 1.6 * H * metalPrice) * 2.15;
+      return ((X * Y * 0.0025 + 2500) * 2 + (X + Y) * 0.002 * 1.6 * (H * 0.001) * metalPrice) * 2.15;
   }
 }
 
@@ -137,7 +137,7 @@ export function calcAddonPrice(
     case "mount_frame":
       return ((X + Y) * 0.0005 * zincPrice065 * 1.2 + 500) * 2;
     case "mount_skeleton":
-      return (((X + Y) * 0.001 + H * 0.004) * zincPrice065 * 1.2 + 2500) * 2;
+      return (((X + Y) * 0.001 + (H * 0.001) * 0.004) * zincPrice065 * 1.2 + 2500) * 2;
   }
 }
 
