@@ -1,6 +1,6 @@
 import { useCalculator } from "@/context/CalculatorContext";
 import { Input } from "@/components/ui/input";
-import { Palette, DollarSign } from "lucide-react";
+import { Palette, DollarSign, Info } from "lucide-react";
 import { motion } from "framer-motion";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -11,8 +11,11 @@ const MetalForm = () => {
     metalCoating, setMetalCoating, metalColor, setMetalColor,
     metalPrice, setMetalPrice, meshPrice, setMeshPrice,
     stainlessPrice, setStainlessPrice, zincPrice065, setZincPrice065,
-    coatings, colors,
+    coatings, colors, priceMatrix,
   } = useCalculator();
+
+  const matrixPrice = priceMatrix[metalCoating]?.[metalColor];
+  const hasMatrixPrice = matrixPrice !== undefined && matrixPrice > 0;
 
   const priceFields = [
     { label: "Цена металла", value: metalPrice, setter: setMetalPrice },
@@ -61,6 +64,17 @@ const MetalForm = () => {
             </SelectContent>
           </Select>
         </div>
+
+        {hasMatrixPrice && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            className="flex items-center gap-2 text-xs text-muted-foreground bg-primary/5 rounded-lg px-3 py-2"
+          >
+            <Info className="w-3.5 h-3.5 text-primary" />
+            <span>Цена из матрицы: <strong className="text-primary">{matrixPrice} руб</strong></span>
+          </motion.div>
+        )}
       </div>
 
       {/* Price inputs */}
