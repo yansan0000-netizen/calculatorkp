@@ -1,6 +1,47 @@
 import { motion } from "framer-motion";
+import { useCalculator } from "@/context/CalculatorContext";
+import { useMemo } from "react";
 
 const PipeSchematic = () => {
+  const { dimensionX, dimensionY, dimensionH, roofAngle } = useCalculator();
+
+  // Normalize dimensions to fit SVG proportionally
+  const dims = useMemo(() => {
+    const maxDim = Math.max(dimensionX || 380, dimensionY || 380, dimensionH || 500, 100);
+    const scale = 140 / maxDim;
+
+    const w = Math.max((dimensionX || 380) * scale, 30);
+    const h = Math.max((dimensionH || 500) * scale, 30);
+    const d = Math.max((dimensionY || 380) * scale * 0.35, 10); // perspective depth
+    const angle = Math.max(5, Math.min(60, roofAngle || 30));
+
+    // Center chimney in viewport
+    const cx = 160;
+    const baseY = 220;
+    const topY = baseY - h;
+
+    const left = cx - w / 2;
+    const right = cx + w / 2;
+
+    // Roof slope from angle
+    const roofDrop = Math.tan((angle * Math.PI) / 180) * 140;
+
+    return { w, h, d, cx, baseY, topY, left, right, angle, roofDrop };
+  }, [dimensionX, dimensionY, dimensionH, roofAngle]);
+
+  const { w, h, d, cx, baseY, topY, left, right, angle, roofDrop } = dims;
+
+  // Roof intersection Y at chimney edges
+  const roofLeftY = baseY;
+  const roofRightY = baseY;
+  const roofFarLeftY = baseY + roofDrop * 0.6;
+  const roofFarRightY = baseY + roofDrop * 0.6;
+
+  // Cap peak
+  const capPeakY = topY - 25;
+
+  const spring = { type: "spring" as const, stiffness: 120, damping: 18, mass: 0.8 };
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
@@ -15,8 +56,9 @@ const PipeSchematic = () => {
         xmlns="http://www.w3.org/2000/svg"
       >
         {/* Roof surface */}
-        <path
-          d="M20 220 L160 140 L300 220"
+        <motion.path
+          animate={{ d: `M20 ${baseY + roofDrop * 0.3} L${cx} ${baseY - roofDrop * 0.15} L300 ${baseY + roofDrop * 0.3}` }}
+          transition={spring}
           stroke="hsl(220, 30%, 60%)"
           strokeWidth="3"
           fill="hsl(220, 20%, 94%)"
@@ -24,11 +66,9 @@ const PipeSchematic = () => {
         />
 
         {/* Chimney body */}
-        <rect
-          x="115"
-          y="60"
-          width="90"
-          height="160"
+        <motion.rect
+          animate={{ x: left, y: topY, width: w, height: h }}
+          transition={spring}
           rx="2"
           fill="hsl(220, 16%, 93%)"
           stroke="hsl(220, 65%, 38%)"
@@ -36,36 +76,79 @@ const PipeSchematic = () => {
         />
 
         {/* Chimney cap */}
-        <path
-          d="M105 60 L160 35 L215 60"
+        <motion.path
+          animate={{ d: `M${left - 10} ${topY} L${cx} ${capPeakY} L${right + 10} ${topY}` }}
+          transition={spring}
           fill="hsl(220, 20%, 88%)"
           stroke="hsl(220, 65%, 38%)"
           strokeWidth="2"
         />
 
         {/* X dimension arrow (width) */}
-        <line x1="115" y1="245" x2="205" y2="245" stroke="hsl(38, 75%, 50%)" strokeWidth="2" markerEnd="url(#arrowR)" markerStart="url(#arrowL)" />
-        <text x="160" y="262" textAnchor="middle" fill="hsl(38, 75%, 45%)" fontSize="14" fontWeight="800" fontFamily="Nunito, sans-serif">X</text>
+        <motion.line
+          animate={{ x1: left, x2: right }}
+          transition={spring}
+          y1="252" y2="252"
+          stroke="hsl(38, 75%, 50%)" strokeWidth="2"
+          markerEnd="url(#arrowR)" markerStart="url(#arrowL)"
+        />
+        <motion.text
+          animate={{ x: cx }}
+          transition={spring}
+          y="268" textAnchor="middle" fill="hsl(38, 75%, 45%)"
+          fontSize="14" fontWeight="800" fontFamily="Nunito, sans-serif"
+        >X</motion.text>
 
-        {/* Y dimension arrow (depth - shown as perspective) */}
-        <line x1="205" y1="60" x2="240" y2="80" stroke="hsl(0, 72%, 51%)" strokeWidth="2" strokeDasharray="4 2" />
-        <text x="248" y="78" textAnchor="start" fill="hsl(0, 72%, 51%)" fontSize="14" fontWeight="800" fontFamily="Nunito, sans-serif">Y</text>
+        {/* Y dimension arrow (depth - perspective) */}
+        <motion.line
+          animate={{ x1: right, y1: topY, x2: right + d, y2: topY + d * 0.6 }}
+          transition={spring}
+          stroke="hsl(0, 72%, 51%)" strokeWidth="2" strokeDasharray="4 2"
+        />
+        <motion.text
+          animate={{ x: right + d + 8, y: topY + d * 0.5 }}
+          transition={spring}
+          textAnchor="start" fill="hsl(0, 72%, 51%)"
+          fontSize="14" fontWeight="800" fontFamily="Nunito, sans-serif"
+        >Y</motion.text>
 
-        {/* H dimension arrow (height above roof) */}
-        <line x1="90" y1="170" x2="90" y2="60" stroke="hsl(155, 55%, 38%)" strokeWidth="2" markerEnd="url(#arrowU)" markerStart="url(#arrowD)" />
-        <text x="78" y="118" textAnchor="end" fill="hsl(155, 55%, 38%)" fontSize="14" fontWeight="800" fontFamily="Nunito, sans-serif">H</text>
+        {/* H dimension arrow (height) */}
+        <motion.line
+          animate={{ x1: left - 25, y1: baseY, x2: left - 25, y2: topY }}
+          transition={spring}
+          stroke="hsl(155, 55%, 38%)" strokeWidth="2"
+          markerEnd="url(#arrowU)" markerStart="url(#arrowD)"
+        />
+        <motion.text
+          animate={{ x: left - 37, y: (baseY + topY) / 2 + 5 }}
+          transition={spring}
+          textAnchor="end" fill="hsl(155, 55%, 38%)"
+          fontSize="14" fontWeight="800" fontFamily="Nunito, sans-serif"
+        >H</motion.text>
 
         {/* Alpha angle arc */}
-        <path
-          d="M220 220 Q 200 200, 210 185"
+        <motion.path
+          animate={{
+            d: `M${right + 20} ${baseY} Q ${right + 5} ${baseY - 15}, ${right + 10} ${baseY - 30}`
+          }}
+          transition={spring}
           stroke="hsl(280, 60%, 50%)"
           strokeWidth="2"
           fill="none"
         />
-        <text x="228" y="200" textAnchor="start" fill="hsl(280, 60%, 50%)" fontSize="14" fontWeight="800" fontFamily="Nunito, sans-serif">α</text>
+        <motion.text
+          animate={{ x: right + 28, y: baseY - 10 }}
+          transition={spring}
+          textAnchor="start" fill="hsl(280, 60%, 50%)"
+          fontSize="14" fontWeight="800" fontFamily="Nunito, sans-serif"
+        >α</motion.text>
 
         {/* Roof line at chimney intersection */}
-        <line x1="115" y1="170" x2="205" y2="170" stroke="hsl(220, 65%, 38%)" strokeWidth="1" strokeDasharray="3 3" />
+        <motion.line
+          animate={{ x1: left, x2: right, y1: baseY, y2: baseY }}
+          transition={spring}
+          stroke="hsl(220, 65%, 38%)" strokeWidth="1" strokeDasharray="3 3"
+        />
 
         {/* Arrow markers */}
         <defs>
