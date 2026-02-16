@@ -6,6 +6,20 @@ import {
 
 interface MetalColor { code: string; name: string; }
 
+export interface CompanyDefaults {
+  companyName: string;
+  inn: string;
+  address: string;
+  phone: string;
+  email: string;
+  website: string;
+  logoDataUrl: string; // base64 data URL
+}
+
+const defaultCompanyDefaults: CompanyDefaults = {
+  companyName: "", inn: "", address: "", phone: "", email: "", website: "", logoDataUrl: "",
+};
+
 // Price matrix: priceMatrix[coating][colorCode] = price
 export type PriceMatrix = Record<string, Record<string, number>>;
 
@@ -49,6 +63,9 @@ interface CalculatorState {
 
   // Comment
   comment: string; setComment: (v: string) => void;
+
+  // Company defaults for PDF
+  companyDefaults: CompanyDefaults; setCompanyDefaults: (v: CompanyDefaults) => void;
 }
 
 const CalculatorContext = createContext<CalculatorState | null>(null);
@@ -88,6 +105,18 @@ export const CalculatorProvider = ({ children }: { children: ReactNode }) => {
   const [coatings, setCoatings] = useState(defaultCoatings);
   const [colors, setColors] = useState(defaultColors);
   const [comment, setComment] = useState("");
+
+  const [companyDefaults, setCompanyDefaults] = useState<CompanyDefaults>(() => {
+    try {
+      const saved = localStorage.getItem("pipe_company_defaults");
+      return saved ? JSON.parse(saved) : defaultCompanyDefaults;
+    } catch { return defaultCompanyDefaults; }
+  });
+
+  // Persist company defaults
+  useEffect(() => {
+    localStorage.setItem("pipe_company_defaults", JSON.stringify(companyDefaults));
+  }, [companyDefaults]);
 
   // Auto-lookup metal price from matrix when coating/color changes
   useEffect(() => {
@@ -129,6 +158,7 @@ export const CalculatorProvider = ({ children }: { children: ReactNode }) => {
       discount, setDiscount,
       coatings, setCoatings, colors, setColors,
       comment, setComment,
+      companyDefaults, setCompanyDefaults,
     }}>
       {children}
     </CalculatorContext.Provider>
