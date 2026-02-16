@@ -7,7 +7,7 @@ import {
 import { Calculator, ChevronDown, Percent } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
-import { Input } from "@/components/ui/input";
+import { NumericInput } from "./DimensionsForm";
 
 interface LineItem {
   name: string;
@@ -122,16 +122,13 @@ const CostSummary = () => {
                   <Percent className="w-4 h-4 text-accent" />
                   <span className="text-sm font-bold text-foreground">Скидка</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    min={0}
-                    max={100}
+                <div className="flex items-center gap-1 w-24">
+                  <NumericInput
                     value={discount}
-                    onChange={(e) => setDiscount(Math.min(100, Math.max(0, Number(e.target.value))))}
-                    className="w-20 h-8 bg-card border border-border rounded-lg text-sm text-right font-bold"
+                    onChange={(v) => setDiscount(Math.min(100, Math.max(0, v)))}
+                    unit="%"
+                    className="h-8 bg-card border border-border rounded-lg text-sm text-right font-bold pr-8"
                   />
-                  <span className="text-sm text-muted-foreground">%</span>
                 </div>
               </div>
 
