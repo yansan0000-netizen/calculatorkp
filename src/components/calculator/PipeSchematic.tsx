@@ -83,7 +83,7 @@ const PipeSchematic = () => {
       className="flex items-center justify-center"
     >
       <svg
-        viewBox="0 0 320 280"
+        viewBox="-30 0 380 280"
         className="w-full max-w-[280px]"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
@@ -361,8 +361,8 @@ const PipeSchematic = () => {
           animate={{ x: cx }}
           transition={spring}
           y="264" textAnchor="middle" fill="hsl(38, 75%, 45%)"
-          fontSize="13" fontWeight="800" fontFamily="Nunito, sans-serif"
-        >X</motion.text>
+          fontSize="11" fontWeight="800" fontFamily="Source Sans 3, sans-serif"
+        >X = {dimensionX || 380} мм</motion.text>
 
         {/* Y */}
         <motion.line
@@ -374,8 +374,8 @@ const PipeSchematic = () => {
           animate={{ x: right + d + 8, y: topY + d * 0.5 }}
           transition={spring}
           textAnchor="start" fill="hsl(0, 72%, 51%)"
-          fontSize="13" fontWeight="800" fontFamily="Nunito, sans-serif"
-        >Y</motion.text>
+          fontSize="11" fontWeight="800" fontFamily="Source Sans 3, sans-serif"
+        >Y = {dimensionY || 380} мм</motion.text>
 
         {/* H */}
         <motion.line
@@ -388,8 +388,8 @@ const PipeSchematic = () => {
           animate={{ x: left - 32, y: (baseY + topY) / 2 + 5 }}
           transition={spring}
           textAnchor="end" fill="hsl(155, 55%, 38%)"
-          fontSize="13" fontWeight="800" fontFamily="Nunito, sans-serif"
-        >H</motion.text>
+          fontSize="11" fontWeight="800" fontFamily="Source Sans 3, sans-serif"
+        >H = {dimensionH || 500} мм</motion.text>
 
         {/* α */}
         <motion.path
@@ -403,8 +403,8 @@ const PipeSchematic = () => {
           animate={{ x: right + 26, y: baseY - 10 }}
           transition={spring}
           textAnchor="start" fill="hsl(280, 60%, 50%)"
-          fontSize="13" fontWeight="800" fontFamily="Nunito, sans-serif"
-        >α</motion.text>
+          fontSize="11" fontWeight="800" fontFamily="Source Sans 3, sans-serif"
+        >α = {roofAngle || 30}°</motion.text>
 
         {/* Roof dashed line */}
         <motion.line
