@@ -1,10 +1,10 @@
 import { useCalculator } from "@/context/CalculatorContext";
-import { Input } from "@/components/ui/input";
 import { Palette, DollarSign, Info } from "lucide-react";
 import { motion } from "framer-motion";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { NumericInput } from "./DimensionsForm";
 
 const MetalForm = () => {
   const {
@@ -87,11 +87,11 @@ const MetalForm = () => {
           {priceFields.map((pf) => (
             <div key={pf.label}>
               <label className="text-xs text-muted-foreground">{pf.label}</label>
-              <Input
-                type="number"
+              <NumericInput
                 value={pf.value}
-                onChange={(e) => pf.setter(Number(e.target.value))}
-                className="mt-0.5 bg-muted border-0 rounded-xl text-sm h-9"
+                onChange={pf.setter}
+                unit="₽"
+                className="mt-0.5 bg-muted border-0 rounded-xl text-sm h-9 pr-8"
               />
             </div>
           ))}

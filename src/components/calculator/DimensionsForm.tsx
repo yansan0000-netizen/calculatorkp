@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Ruler } from "lucide-react";
 import { motion } from "framer-motion";
 import PipeSchematic from "./PipeSchematic";
+import { useState } from "react";
 
 const fields = [
   { key: "dimensionX" as const, label: "X", unit: "мм", desc: "ширина трубы", color: "text-[hsl(38,75%,45%)]" },
@@ -17,6 +18,38 @@ const setters = {
   dimensionH: "setDimensionH",
   roofAngle: "setRoofAngle",
 } as const;
+
+const parseNum = (v: string) => {
+  const cleaned = v.replace(",", ".").replace(/[^\d.]/g, "");
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? 0 : num;
+};
+
+const NumericInput = ({ value, onChange, unit, className }: {
+  value: number; onChange: (v: number) => void; unit: string; className?: string;
+}) => {
+  const [local, setLocal] = useState(String(value));
+  const [focused, setFocused] = useState(false);
+
+  const display = focused ? local : (value === 0 ? "" : String(value));
+
+  return (
+    <div className="relative mt-1">
+      <Input
+        type="text"
+        inputMode="decimal"
+        value={display}
+        onFocus={() => { setLocal(value === 0 ? "" : String(value)); setFocused(true); }}
+        onBlur={() => { setFocused(false); onChange(parseNum(local)); }}
+        onChange={(e) => { setLocal(e.target.value); onChange(parseNum(e.target.value)); }}
+        className={className || "bg-muted border-0 rounded-xl pr-10"}
+      />
+      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+        {unit}
+      </span>
+    </div>
+  );
+};
 
 const DimensionsForm = () => {
   const calc = useCalculator();
@@ -47,17 +80,11 @@ const DimensionsForm = () => {
               <span className={f.color}>{f.label}</span>{" "}
               <span className="text-muted-foreground font-normal">({f.desc})</span>
             </label>
-            <div className="relative mt-1">
-              <Input
-                type="number"
-                value={calc[f.key]}
-                onChange={(e) => (calc as any)[setters[f.key]](Number(e.target.value))}
-                className="bg-muted border-0 rounded-xl pr-10"
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                {f.unit}
-              </span>
-            </div>
+            <NumericInput
+              value={calc[f.key]}
+              onChange={(v) => (calc as any)[setters[f.key]](v)}
+              unit={f.unit}
+            />
           </motion.div>
         ))}
       </div>
@@ -66,3 +93,4 @@ const DimensionsForm = () => {
 };
 
 export default DimensionsForm;
+export { NumericInput };
