@@ -67,6 +67,7 @@ const Calculator = () => {
         discount: calc.discount,
         comment: calc.comment,
         company,
+        companyDefaults: calc.companyDefaults,
       };
       await generateCommercialPdf(pdfData);
 
