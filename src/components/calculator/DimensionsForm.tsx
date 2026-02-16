@@ -2,12 +2,13 @@ import { useCalculator } from "@/context/CalculatorContext";
 import { Input } from "@/components/ui/input";
 import { Ruler } from "lucide-react";
 import { motion } from "framer-motion";
+import PipeSchematic from "./PipeSchematic";
 
 const fields = [
-  { key: "dimensionX" as const, label: "X", unit: "мм", desc: "ширина трубы" },
-  { key: "dimensionY" as const, label: "Y", unit: "мм", desc: "глубина трубы" },
-  { key: "dimensionH" as const, label: "H", unit: "мм", desc: "высота над кровлей" },
-  { key: "roofAngle" as const, label: "α", unit: "°", desc: "угол наклона кровли" },
+  { key: "dimensionX" as const, label: "X", unit: "мм", desc: "ширина трубы", color: "text-[hsl(38,75%,45%)]" },
+  { key: "dimensionY" as const, label: "Y", unit: "мм", desc: "глубина трубы", color: "text-destructive" },
+  { key: "dimensionH" as const, label: "H", unit: "мм", desc: "высота над кровлей", color: "text-[hsl(155,55%,38%)]" },
+  { key: "roofAngle" as const, label: "α", unit: "°", desc: "угол наклона кровли", color: "text-[hsl(280,60%,50%)]" },
 ];
 
 const setters = {
@@ -32,6 +33,8 @@ const DimensionsForm = () => {
         <h3 className="text-lg font-bold text-foreground">Размеры трубы</h3>
       </div>
 
+      <PipeSchematic />
+
       <div className="grid grid-cols-2 gap-3">
         {fields.map((f, i) => (
           <motion.div
@@ -41,7 +44,8 @@ const DimensionsForm = () => {
             transition={{ delay: i * 0.08, duration: 0.3 }}
           >
             <label className="text-sm font-bold text-foreground">
-              {f.label} <span className="text-muted-foreground font-normal">({f.desc})</span>
+              <span className={f.color}>{f.label}</span>{" "}
+              <span className="text-muted-foreground font-normal">({f.desc})</span>
             </label>
             <div className="relative mt-1">
               <Input

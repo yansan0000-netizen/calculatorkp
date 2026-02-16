@@ -35,7 +35,7 @@ const Calculator = () => {
   const computeTotal = () => {
     const { dimensionX: X, dimensionY: Y, dimensionH: H,
       metalPrice, meshPrice, stainlessPrice, zincPrice065,
-      capModel, boxModel, flashingModel, selectedAddons } = calc;
+      capModel, boxModel, flashingModel, selectedAddons, discount } = calc;
     let total = 0;
     if (capModel !== "custom") total += calcCapPrice(capModel, X, Y, metalPrice);
     if (boxModel !== "none") total += calcBoxPrice(boxModel, X, Y, H, metalPrice);
@@ -43,7 +43,7 @@ const Calculator = () => {
     selectedAddons.forEach(id => {
       total += calcAddonPrice(id, capModel, X, Y, H, metalPrice, meshPrice, stainlessPrice, zincPrice065);
     });
-    return Math.round(total);
+    return Math.round(total * (1 - discount / 100));
   };
 
   const handleExportPdf = async () => {
@@ -64,6 +64,7 @@ const Calculator = () => {
         boxModel: calc.boxModel,
         flashingModel: calc.flashingModel,
         selectedAddons: calc.selectedAddons,
+        discount: calc.discount,
         comment: calc.comment,
         company,
       };

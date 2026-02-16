@@ -2,10 +2,10 @@ import { useCalculator } from "@/context/CalculatorContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { ArrowRight, Plus, Trash2, Pencil, Check, X } from "lucide-react";
+import { ArrowRight, Plus, Trash2, Grid3x3 } from "lucide-react";
 import { useState } from "react";
-import { toast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const SettingsPage = () => {
   const {
@@ -15,6 +15,7 @@ const SettingsPage = () => {
     meshPrice, setMeshPrice,
     stainlessPrice, setStainlessPrice,
     zincPrice065, setZincPrice065,
+    priceMatrix, updateMatrixPrice,
   } = useCalculator();
 
   const [newCoating, setNewCoating] = useState("");
@@ -24,10 +25,10 @@ const SettingsPage = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="gradient-header">
-        <div className="container max-w-4xl py-8 flex items-center justify-between">
+        <div className="container max-w-5xl py-8 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-extrabold text-primary-foreground">Настройки</h1>
-            <p className="text-sm text-primary-foreground/70 mt-1">Цены материалов и списки</p>
+            <p className="text-sm text-primary-foreground/70 mt-1">Цены материалов, матрица цен и списки</p>
           </div>
           <Link to="/">
             <Button className="gradient-accent text-accent-foreground hover:opacity-90 rounded-full font-bold px-6">
@@ -37,10 +38,10 @@ const SettingsPage = () => {
         </div>
       </div>
 
-      <div className="container max-w-4xl py-8 space-y-6">
+      <div className="container max-w-5xl py-8 space-y-6">
         {/* Material Prices */}
         <section className="card-soft p-8">
-          <h2 className="text-lg font-bold text-foreground mb-4">Цены материалов (руб)</h2>
+          <h2 className="text-lg font-bold text-foreground mb-4">Базовые цены материалов (руб)</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
               { label: "Цена металла", value: metalPrice, set: setMetalPrice },
@@ -57,6 +58,59 @@ const SettingsPage = () => {
           </div>
         </section>
 
+        {/* Price Matrix */}
+        <section className="card-soft p-8">
+          <div className="flex items-center gap-2 mb-2">
+            <Grid3x3 className="w-5 h-5 text-primary" />
+            <h2 className="text-lg font-bold text-foreground">Матрица цен на металл</h2>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            Покрытие × Цвет → цена (руб). Заполненные ячейки автоматически подставляют цену металла при выборе в калькуляторе.
+          </p>
+
+          <ScrollArea className="w-full">
+            <div className="min-w-[600px]">
+              <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr>
+                    <th className="text-left p-2 bg-muted rounded-tl-lg font-bold text-foreground sticky left-0 z-10 bg-muted min-w-[140px]">
+                      Покрытие \ Цвет
+                    </th>
+                    {colors.map(c => (
+                      <th key={c.code} className="p-2 bg-muted text-center font-semibold text-foreground min-w-[70px] whitespace-nowrap">
+                        {c.code}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {coatings.map((coating, ri) => (
+                    <tr key={coating} className={ri % 2 === 0 ? "bg-card" : "bg-muted/30"}>
+                      <td className="p-2 font-semibold text-foreground sticky left-0 z-10 bg-inherit min-w-[140px] whitespace-nowrap">
+                        {coating}
+                      </td>
+                      {colors.map(color => {
+                        const val = priceMatrix[coating]?.[color.code] || "";
+                        return (
+                          <td key={color.code} className="p-1">
+                            <Input
+                              type="number"
+                              value={val}
+                              placeholder="—"
+                              onChange={(e) => updateMatrixPrice(coating, color.code, Number(e.target.value))}
+                              className="h-7 w-full text-xs text-center bg-transparent border border-border/50 rounded-md p-1 focus:border-primary"
+                            />
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </ScrollArea>
+        </section>
+
         {/* Coatings */}
         <section className="card-soft p-8">
           <h2 className="text-lg font-bold text-foreground mb-4">Покрытия металла</h2>
@@ -64,7 +118,7 @@ const SettingsPage = () => {
             {coatings.map((c, i) => (
               <div key={i} className="flex items-center gap-2 bg-muted/50 rounded-xl px-4 py-2">
                 <span className="text-sm text-foreground flex-1">{c}</span>
-                <button onClick={() => { setCoatings(coatings.filter((_, idx) => idx !== i)); }}
+                <button onClick={() => setCoatings(coatings.filter((_, idx) => idx !== i))}
                   className="text-muted-foreground hover:text-destructive"><Trash2 className="w-3.5 h-3.5" /></button>
               </div>
             ))}

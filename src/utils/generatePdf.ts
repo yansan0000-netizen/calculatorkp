@@ -28,6 +28,7 @@ interface PdfData {
   boxModel: BoxModel;
   flashingModel: FlashingModel;
   selectedAddons: AddonId[];
+  discount: number;
   comment: string;
   company: CompanyInfo;
 }
@@ -74,6 +75,8 @@ export async function generateCommercialPdf(data: PdfData) {
   });
 
   const total = rows.reduce((s, r) => s + r.price, 0);
+  const discountedTotal = total * (1 - (data.discount || 0) / 100);
+  const hasDiscount = (data.discount || 0) > 0;
   const co = data.company;
   const hasCompany = co.companyName || co.contactPerson || co.phone || co.email;
 
@@ -122,6 +125,15 @@ export async function generateCommercialPdf(data: PdfData) {
           <td colspan="2" style="padding:8px;border:1px solid #ddd;text-align:right">ИТОГО:</td>
           <td style="padding:8px;border:1px solid #ddd;text-align:right;font-size:15px">${fmt(total)}</td>
         </tr>
+        ${hasDiscount ? `
+        <tr style="font-weight:700;color:#666">
+          <td colspan="2" style="padding:8px;border:1px solid #ddd;text-align:right">Скидка ${data.discount}%:</td>
+          <td style="padding:8px;border:1px solid #ddd;text-align:right">-${fmt(total - discountedTotal)}</td>
+        </tr>
+        <tr style="background:#e8f5e9;font-weight:700;color:#2e7d32">
+          <td colspan="2" style="padding:8px;border:1px solid #ddd;text-align:right">ИТОГО СО СКИДКОЙ:</td>
+          <td style="padding:8px;border:1px solid #ddd;text-align:right;font-size:16px">${fmt(discountedTotal)}</td>
+        </tr>` : ""}
       </tbody>
     </table>
     ${data.comment ? `<div style="margin-top:20px;font-size:13px"><strong>Комментарий:</strong> ${data.comment}</div>` : ""}
