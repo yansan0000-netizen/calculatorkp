@@ -8,7 +8,7 @@ import MetalForm from "@/components/calculator/MetalForm";
 import AdditionalOptions from "@/components/calculator/AdditionalOptions";
 import CostSummary from "@/components/calculator/CostSummary";
 import { Link } from "react-router-dom";
-import { Settings, FileDown, Building2, MessageSquare, History } from "lucide-react";
+import { Settings, FileDown, Building2, MessageSquare, History, Cylinder } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { generateCommercialPdf } from "@/utils/generatePdf";
 import { toast } from "@/hooks/use-toast";
@@ -106,11 +106,19 @@ const Calculator = () => {
         transition={{ duration: 0.5 }}
         className="gradient-header"
       >
-        <div className="container max-w-5xl py-8">
+        <div className="container max-w-5xl py-6">
           <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-extrabold tracking-tight text-primary-foreground">
-              КАЛЬКУЛЯТОР
-            </h1>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center">
+                <Cylinder className="w-6 h-6 text-primary-foreground" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-extrabold tracking-tight text-primary-foreground">
+                  Калькулятор системы PIPE
+                </h1>
+                <p className="text-xs text-primary-foreground/50 font-medium">Расчёт стоимости изделий</p>
+              </div>
+            </div>
             <div className="flex items-center gap-2">
               <Link
                 to="/history"
