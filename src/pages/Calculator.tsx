@@ -4,6 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import ProductSelection from "@/components/calculator/ProductSelection";
 import DimensionsForm from "@/components/calculator/DimensionsForm";
+import MetalForm from "@/components/calculator/MetalForm";
 import AdditionalOptions from "@/components/calculator/AdditionalOptions";
 import CostSummary from "@/components/calculator/CostSummary";
 import { Link } from "react-router-dom";
@@ -12,7 +13,11 @@ import { Input } from "@/components/ui/input";
 import { generateCommercialPdf } from "@/utils/generatePdf";
 import { toast } from "@/hooks/use-toast";
 import { saveToHistory } from "@/pages/History";
-import { calculatePrice } from "@/data/calculatorData";
+import { motion } from "framer-motion";
+import {
+  calcCapPrice, calcBoxPrice, calcFlashingPrice, calcAddonPrice,
+  capModels, boxModels, flashingModels, addonOptions, formatPrice,
+} from "@/data/calculatorData";
 
 import type { CompanyInfo } from "@/utils/generatePdf";
 
@@ -27,42 +32,59 @@ const Calculator = () => {
     email: "",
   });
 
+  const computeTotal = () => {
+    const { dimensionX: X, dimensionY: Y, dimensionH: H,
+      metalPrice, meshPrice, stainlessPrice, zincPrice065,
+      capModel, boxModel, flashingModel, selectedAddons } = calc;
+    let total = 0;
+    if (capModel !== "custom") total += calcCapPrice(capModel, X, Y, metalPrice);
+    if (boxModel !== "none") total += calcBoxPrice(boxModel, X, Y, H, metalPrice);
+    if (flashingModel !== "none") total += calcFlashingPrice(flashingModel, X, Y, metalPrice);
+    selectedAddons.forEach(id => {
+      total += calcAddonPrice(id, capModel, X, Y, H, metalPrice, meshPrice, stainlessPrice, zincPrice065);
+    });
+    return Math.round(total);
+  };
+
   const handleExportPdf = async () => {
     setPdfLoading(true);
     try {
       const pdfData = {
-        products: calc.products,
-        selectedProducts: calc.selectedProducts,
         dimensionX: calc.dimensionX,
         dimensionY: calc.dimensionY,
-        dimensionL: calc.dimensionL,
+        dimensionH: calc.dimensionH,
         roofAngle: calc.roofAngle,
         metalCoating: calc.metalCoating,
         metalColor: calc.metalColor,
-        capCollection: calc.capCollection,
-        designBypass: calc.designBypass,
-        roofMaterial: calc.roofMaterial,
-        coatingMultiplier: calc.coatingMultipliers[calc.metalCoating] ?? 1,
+        metalPrice: calc.metalPrice,
+        meshPrice: calc.meshPrice,
+        stainlessPrice: calc.stainlessPrice,
+        zincPrice065: calc.zincPrice065,
+        capModel: calc.capModel,
+        boxModel: calc.boxModel,
+        flashingModel: calc.flashingModel,
+        selectedAddons: calc.selectedAddons,
         comment: calc.comment,
         company,
       };
       await generateCommercialPdf(pdfData);
 
-      // Save to history
-      const selected = calc.products.filter((p) => calc.selectedProducts.includes(p.id));
-      const total = selected.reduce(
-        (s, p) =>
-          s +
-          calculatePrice(p, calc.dimensionX, calc.dimensionY, calc.dimensionL, calc.roofAngle, pdfData.coatingMultiplier),
-        0
-      );
+      const total = computeTotal();
+      const names: string[] = [];
+      const capInfo = capModels.find(c => c.id === calc.capModel);
+      if (capInfo) names.push(capInfo.name);
+      const boxInfo = boxModels.find(b => b.id === calc.boxModel);
+      if (boxInfo && calc.boxModel !== "none") names.push(boxInfo.name);
+      const flashInfo = flashingModels.find(f => f.id === calc.flashingModel);
+      if (flashInfo && calc.flashingModel !== "none") names.push(flashInfo.name);
+
       saveToHistory({
         id: Date.now().toString(),
         date: new Date().toLocaleString("ru-RU"),
         companyName: company.companyName,
         contactPerson: company.contactPerson,
         totalPrice: total,
-        selectedProductNames: selected.map((p) => p.name),
+        selectedProductNames: names,
         pdfData,
       });
 
@@ -77,11 +99,16 @@ const Calculator = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="gradient-header">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="gradient-header"
+      >
         <div className="container max-w-5xl py-8">
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-extrabold tracking-tight text-primary-foreground">
-              КАЛЬКУЛЯТОР СИСТЕМЫ PIPE
+              КАЛЬКУЛЯТОР
             </h1>
             <div className="flex items-center gap-2">
               <Link
@@ -101,30 +128,53 @@ const Calculator = () => {
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Main Content */}
       <div className="container max-w-5xl py-8 space-y-6">
-        {/* Top Section: Product Selection + Dimensions */}
-        <div className="card-soft p-8">
+        {/* Dimensions + Metal */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.15 }}
+          className="card-soft p-8"
+        >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <ProductSelection />
             <DimensionsForm />
+            <MetalForm />
           </div>
-        </div>
+        </motion.div>
+
+        {/* Product Selection */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.25 }}
+          className="card-soft p-8"
+        >
+          <ProductSelection />
+        </motion.div>
 
         {/* Additional Options */}
-        <div className="card-soft p-8">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.35 }}
+          className="card-soft p-8"
+        >
           <AdditionalOptions />
-        </div>
+        </motion.div>
 
         {/* Comment */}
-        <div className="card-soft p-8 space-y-3">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="card-soft p-8 space-y-3"
+        >
           <div className="flex items-center gap-2">
             <MessageSquare className="w-5 h-5 text-primary" />
-            <label className="text-sm font-bold text-foreground">
-              Комментарий к заказу
-            </label>
+            <label className="text-sm font-bold text-foreground">Комментарий к заказу</label>
           </div>
           <Textarea
             placeholder="Введите комментарий сюда"
@@ -133,49 +183,45 @@ const Calculator = () => {
             className="bg-muted border-0 resize-none rounded-xl"
             rows={3}
           />
-        </div>
+        </motion.div>
 
         {/* Cost Summary */}
         <CostSummary />
 
-        {/* Company Info for PDF */}
-        <div className="card-soft p-8 space-y-4">
+        {/* Company Info */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          className="card-soft p-8 space-y-4"
+        >
           <div className="flex items-center gap-2 mb-2">
             <Building2 className="w-5 h-5 text-primary" />
             <h3 className="text-lg font-bold text-foreground">Данные для КП</h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <Input
-              placeholder="Название компании"
-              value={company.companyName}
-              onChange={(e) => setCompany((c) => ({ ...c, companyName: e.target.value }))}
-              className="bg-muted border-0 rounded-xl"
-            />
-            <Input
-              placeholder="Контактное лицо"
-              value={company.contactPerson}
-              onChange={(e) => setCompany((c) => ({ ...c, contactPerson: e.target.value }))}
-              className="bg-muted border-0 rounded-xl"
-            />
-            <Input
-              placeholder="Телефон"
-              type="tel"
-              value={company.phone}
-              onChange={(e) => setCompany((c) => ({ ...c, phone: e.target.value }))}
-              className="bg-muted border-0 rounded-xl"
-            />
-            <Input
-              placeholder="Email"
-              type="email"
-              value={company.email}
-              onChange={(e) => setCompany((c) => ({ ...c, email: e.target.value }))}
-              className="bg-muted border-0 rounded-xl"
-            />
+            <Input placeholder="Название компании" value={company.companyName}
+              onChange={(e) => setCompany(c => ({ ...c, companyName: e.target.value }))}
+              className="bg-muted border-0 rounded-xl" />
+            <Input placeholder="Контактное лицо" value={company.contactPerson}
+              onChange={(e) => setCompany(c => ({ ...c, contactPerson: e.target.value }))}
+              className="bg-muted border-0 rounded-xl" />
+            <Input placeholder="Телефон" type="tel" value={company.phone}
+              onChange={(e) => setCompany(c => ({ ...c, phone: e.target.value }))}
+              className="bg-muted border-0 rounded-xl" />
+            <Input placeholder="Email" type="email" value={company.email}
+              onChange={(e) => setCompany(c => ({ ...c, email: e.target.value }))}
+              className="bg-muted border-0 rounded-xl" />
           </div>
-        </div>
+        </motion.div>
 
         {/* PDF Export */}
-        <div className="flex justify-center pb-8">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.55 }}
+          className="flex justify-center pb-8"
+        >
           <Button
             onClick={handleExportPdf}
             disabled={pdfLoading}
@@ -184,7 +230,7 @@ const Calculator = () => {
             <FileDown className="w-5 h-5 mr-2" />
             {pdfLoading ? "Генерация..." : "СКАЧАТЬ КП (PDF)"}
           </Button>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

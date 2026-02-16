@@ -1,106 +1,63 @@
 import { useCalculator } from "@/context/CalculatorContext";
 import { Input } from "@/components/ui/input";
 import { Ruler } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { motion } from "framer-motion";
+
+const fields = [
+  { key: "dimensionX" as const, label: "X", unit: "мм", desc: "ширина трубы" },
+  { key: "dimensionY" as const, label: "Y", unit: "мм", desc: "глубина трубы" },
+  { key: "dimensionH" as const, label: "H", unit: "мм", desc: "высота над кровлей" },
+  { key: "roofAngle" as const, label: "α", unit: "°", desc: "угол наклона кровли" },
+];
+
+const setters = {
+  dimensionX: "setDimensionX",
+  dimensionY: "setDimensionY",
+  dimensionH: "setDimensionH",
+  roofAngle: "setRoofAngle",
+} as const;
 
 const DimensionsForm = () => {
-  const {
-    dimensionX, setDimensionX,
-    dimensionY, setDimensionY,
-    dimensionL, setDimensionL,
-    roofAngle, setRoofAngle,
-    metalCoating, setMetalCoating,
-    metalColor, setMetalColor,
-    roofAngles, metalCoatings, metalColors,
-  } = useCalculator();
+  const calc = useCalculator();
 
   return (
-    <div className="space-y-5">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="space-y-5"
+    >
       <div className="flex items-center gap-2">
         <Ruler className="w-5 h-5 text-primary" />
         <h3 className="text-lg font-bold text-foreground">Размеры трубы</h3>
       </div>
 
-      <div className="space-y-4">
-        <div>
-          <label className="text-sm font-bold text-foreground">X <span className="text-muted-foreground font-normal">(мм)</span></label>
-          <Input
-            type="number"
-            value={dimensionX}
-            onChange={(e) => setDimensionX(Number(e.target.value))}
-            className="mt-1 bg-muted border-0 rounded-xl"
-          />
-        </div>
-
-        <div>
-          <label className="text-sm font-bold text-foreground">Y <span className="text-muted-foreground font-normal">(мм)</span></label>
-          <Input
-            type="number"
-            value={dimensionY}
-            onChange={(e) => setDimensionY(Number(e.target.value))}
-            className="mt-1 bg-muted border-0 rounded-xl"
-          />
-        </div>
-
-        <div>
-          <label className="text-sm font-bold text-foreground">Размер L <span className="text-muted-foreground font-normal">(мм)</span></label>
-          <Input
-            type="number"
-            value={dimensionL}
-            onChange={(e) => setDimensionL(Number(e.target.value))}
-            className="mt-1 bg-muted border-0 rounded-xl"
-          />
-        </div>
-
-        <div>
-          <label className="text-sm font-bold text-foreground">Угол уклона кровли</label>
-          <Select value={String(roofAngle)} onValueChange={(v) => setRoofAngle(Number(v))}>
-            <SelectTrigger className="mt-1 bg-muted border-0 rounded-xl">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-card rounded-xl">
-              {roofAngles.map((angle) => (
-                <SelectItem key={angle} value={String(angle)}>{angle}°</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
-          <label className="text-sm font-bold text-foreground">Покрытие металла</label>
-          <Select value={metalCoating} onValueChange={setMetalCoating}>
-            <SelectTrigger className="mt-1 bg-muted border-0 rounded-xl">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-card rounded-xl">
-              {metalCoatings.map((c) => (
-                <SelectItem key={c} value={c}>{c}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
-          <label className="text-sm font-bold text-foreground">Цвет металла</label>
-          <Select value={metalColor} onValueChange={setMetalColor}>
-            <SelectTrigger className="mt-1 bg-muted border-0 rounded-xl">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-card rounded-xl">
-              {metalColors.map((c) => (
-                <SelectItem key={c.code} value={c.code}>{c.code} — {c.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      <div className="grid grid-cols-2 gap-3">
+        {fields.map((f, i) => (
+          <motion.div
+            key={f.key}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: i * 0.08, duration: 0.3 }}
+          >
+            <label className="text-sm font-bold text-foreground">
+              {f.label} <span className="text-muted-foreground font-normal">({f.desc})</span>
+            </label>
+            <div className="relative mt-1">
+              <Input
+                type="number"
+                value={calc[f.key]}
+                onChange={(e) => (calc as any)[setters[f.key]](Number(e.target.value))}
+                className="bg-muted border-0 rounded-xl pr-10"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                {f.unit}
+              </span>
+            </div>
+          </motion.div>
+        ))}
       </div>
-    </div>
+    </motion.div>
   );
 };
 

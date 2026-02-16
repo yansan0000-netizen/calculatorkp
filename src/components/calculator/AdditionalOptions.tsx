@@ -1,72 +1,58 @@
 import { useCalculator } from "@/context/CalculatorContext";
-import { Sliders } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { addonOptions, AddonId } from "@/data/calculatorData";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Settings2 } from "lucide-react";
+import { motion } from "framer-motion";
 
 const AdditionalOptions = () => {
-  const {
-    capCollection, setCapCollection,
-    designBypass, setDesignBypass,
-    roofMaterial, setRoofMaterial,
-    capCollections, designBypasses, roofMaterials,
-  } = useCalculator();
+  const { selectedAddons, toggleAddon, capModel, boxModel } = useCalculator();
+
+  const available = addonOptions.filter((opt) => {
+    if (opt.appliesTo === "cap") return capModel !== "custom";
+    if (opt.appliesTo === "box") return boxModel !== "none";
+    return true;
+  });
+
+  if (available.length === 0) return null;
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="space-y-4"
+    >
       <div className="flex items-center gap-2">
-        <Sliders className="w-5 h-5 text-primary" />
-        <h3 className="text-lg font-bold text-foreground">Дополнительные параметры</h3>
+        <Settings2 className="w-5 h-5 text-primary" />
+        <h3 className="text-lg font-bold text-foreground">Дополнительные опции</h3>
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
-          <label className="text-sm font-bold text-foreground">Коллекция колпаков</label>
-          <Select value={capCollection} onValueChange={setCapCollection}>
-            <SelectTrigger className="mt-1 bg-muted border-0 rounded-xl">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-card rounded-xl">
-              {capCollections.map((c) => (
-                <SelectItem key={c} value={c}>{c}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
-          <label className="text-sm font-bold text-foreground">Дизайнерские обходы</label>
-          <Select value={designBypass} onValueChange={setDesignBypass}>
-            <SelectTrigger className="mt-1 bg-muted border-0 rounded-xl">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-card rounded-xl">
-              {designBypasses.map((d) => (
-                <SelectItem key={d} value={d}>{d}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
-          <label className="text-sm font-bold text-foreground">Материал кровли</label>
-          <Select value={roofMaterial} onValueChange={setRoofMaterial}>
-            <SelectTrigger className="mt-1 bg-muted border-0 rounded-xl">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-card rounded-xl">
-              {roofMaterials.map((m) => (
-                <SelectItem key={m} value={m}>{m}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {available.map((opt, i) => {
+          const checked = selectedAddons.includes(opt.id);
+          return (
+            <motion.label
+              key={opt.id}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.05 }}
+              className={`flex items-start gap-3 cursor-pointer p-3 rounded-xl transition-all duration-200 ${
+                checked ? "bg-primary/5 border border-primary/20" : "bg-muted border border-transparent hover:border-primary/10"
+              }`}
+            >
+              <Checkbox
+                checked={checked}
+                onCheckedChange={() => toggleAddon(opt.id)}
+                className="mt-0.5 data-[state=checked]:bg-primary data-[state=checked]:border-primary rounded-md"
+              />
+              <div>
+                <span className="text-sm font-semibold text-foreground">{opt.name}</span>
+                <p className="text-xs text-muted-foreground">{opt.description}</p>
+              </div>
+            </motion.label>
+          );
+        })}
       </div>
-    </div>
+    </motion.div>
   );
 };
 
