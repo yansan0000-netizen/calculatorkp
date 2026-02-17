@@ -8,24 +8,27 @@ import SettingsPage from "./pages/Settings";
 import HistoryPage from "./pages/History";
 import NotFound from "./pages/NotFound";
 import { CalculatorProvider } from "./context/CalculatorContext";
+import PasswordGate from "./components/PasswordGate";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <CalculatorProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Calculator />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/history" element={<HistoryPage />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </CalculatorProvider>
+      <PasswordGate>
+        <CalculatorProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Calculator />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/history" element={<HistoryPage />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </CalculatorProvider>
+      </PasswordGate>
     </TooltipProvider>
   </QueryClientProvider>
 );
