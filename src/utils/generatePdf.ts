@@ -233,9 +233,10 @@ export async function generateCommercialPdf(data: PdfData) {
   await document.fonts.ready;
   await new Promise(r => setTimeout(r, 200));
 
-  const canvas = await html2canvas(container, { scale: 2, useCORS: true, allowTaint: true });
+  const canvas = await html2canvas(container, { scale: 1.5, useCORS: true, allowTaint: true });
   document.body.removeChild(container);
 
+  const imgData = canvas.toDataURL("image/jpeg", 0.85);
   const imgWidth = 190;
   const imgHeight = (canvas.height * imgWidth) / canvas.width;
   const pdf = new jsPDF("p", "mm", "a4");
@@ -243,11 +244,11 @@ export async function generateCommercialPdf(data: PdfData) {
   let position = 10;
 
   if (imgHeight <= pageHeight) {
-    pdf.addImage(canvas.toDataURL("image/png"), "PNG", 10, position, imgWidth, imgHeight);
+    pdf.addImage(imgData, "JPEG", 10, position, imgWidth, imgHeight);
   } else {
     let remainingHeight = imgHeight;
     while (remainingHeight > 0) {
-      pdf.addImage(canvas.toDataURL("image/png"), "PNG", 10, position, imgWidth, imgHeight);
+      pdf.addImage(imgData, "JPEG", 10, position, imgWidth, imgHeight);
       remainingHeight -= pageHeight;
       if (remainingHeight > 0) {
         pdf.addPage();
