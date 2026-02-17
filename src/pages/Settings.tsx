@@ -460,12 +460,12 @@ const docSections = [
 **Как запустить:**
 Откройте терминал (на Windows: нажмите Win+R, введите \`cmd\`, нажмите Enter) и вставьте эти команды по очереди:
 
-\`\`\`
+[CODE]
 git clone https://github.com/yansan0000-netizen/calculatorkp.git
 cd calculatorkp
 npm install
 npm run dev
-\`\`\`
+[/CODE]
 
 После этого откройте браузер и перейдите по адресу: **http://localhost:5173**
 
@@ -524,7 +524,7 @@ const DocumentationSection = () => {
             {openIndex === i && (
               <div className="px-4 pb-4 border-t border-border">
                 <div className="text-sm text-muted-foreground mt-3 leading-relaxed space-y-3">
-                  {section.content.split(/```([\s\S]*?)```/).map((block, bi) => {
+                  {section.content.split(/\[CODE\]([\s\S]*?)\[\/CODE\]/).map((block, bi) => {
                     if (bi % 2 === 1) {
                       return (
                         <pre key={bi} className="bg-muted/80 border border-border rounded-lg p-4 overflow-x-auto">
