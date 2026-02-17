@@ -3,7 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Lock } from "lucide-react";
 
-const PASS = "vbm125";
+const DEFAULT_PASS = "vbm125";
+
+export function getPassword(): string {
+  return localStorage.getItem("pipe_password") || DEFAULT_PASS;
+}
+
+export function setPassword(newPass: string) {
+  localStorage.setItem("pipe_password", newPass);
+}
 
 const PasswordGate = ({ children }: { children: React.ReactNode }) => {
   const [authorized, setAuthorized] = useState(() => sessionStorage.getItem("pipe_auth") === "1");
@@ -14,7 +22,7 @@ const PasswordGate = ({ children }: { children: React.ReactNode }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (value === PASS) {
+    if (value === getPassword()) {
       sessionStorage.setItem("pipe_auth", "1");
       setAuthorized(true);
     } else {

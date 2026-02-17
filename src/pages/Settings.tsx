@@ -2,13 +2,14 @@ import { useCalculator } from "@/context/CalculatorContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { ArrowRight, Plus, Trash2, Grid3x3, Building2, Upload, Image, ImagePlus } from "lucide-react";
+import { ArrowRight, Plus, Trash2, Grid3x3, Building2, Upload, Image, ImagePlus, Lock, Package } from "lucide-react";
 import { useState, useRef } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { NumericInput } from "@/components/calculator/DimensionsForm";
 import { toast } from "@/hooks/use-toast";
 import { capModels, boxModels, flashingModels } from "@/data/calculatorData";
-import { defaultCapImages, defaultBoxImages, defaultFlashingImages } from "@/components/calculator/ProductSelection";
+import { defaultCapImages, defaultBoxImages, defaultFlashingImages, getAllModels } from "@/components/calculator/ProductSelection";
+import { getPassword, setPassword } from "@/components/PasswordGate";
 
 interface ProductImageConfig {
   cap: Record<string, string>;
@@ -27,6 +28,165 @@ function saveImages(images: ProductImageConfig) {
   localStorage.setItem("pipe_product_images", JSON.stringify(images));
 }
 
+// === Custom Models Manager ===
+interface CustomModels {
+  cap: { id: string; name: string; description: string }[];
+  box: { id: string; name: string; description: string }[];
+  flashing: { id: string; name: string; description: string }[];
+}
+
+function getCustomModels(): CustomModels {
+  try {
+    const saved = localStorage.getItem("pipe_custom_models");
+    return saved ? JSON.parse(saved) : { cap: [], box: [], flashing: [] };
+  } catch { return { cap: [], box: [], flashing: [] }; }
+}
+
+function saveCustomModels(models: CustomModels) {
+  localStorage.setItem("pipe_custom_models", JSON.stringify(models));
+}
+
+const CustomModelManager = () => {
+  const [models, setModels] = useState<CustomModels>(getCustomModels);
+  const [newName, setNewName] = useState("");
+  const [newDesc, setNewDesc] = useState("");
+  const [activeGroup, setActiveGroup] = useState<"cap" | "box" | "flashing">("cap");
+
+  const groupLabels: Record<string, string> = { cap: "Колпаки", box: "Короба", flashing: "Оклады" };
+
+  const addModel = () => {
+    if (!newName.trim()) return;
+    const id = `custom_${Date.now()}`;
+    const updated = {
+      ...models,
+      [activeGroup]: [...models[activeGroup], { id, name: newName.trim(), description: newDesc.trim() || "Пользовательская модель" }],
+    };
+    setModels(updated);
+    saveCustomModels(updated);
+    setNewName("");
+    setNewDesc("");
+    toast({ title: `Добавлено: ${newName.trim()}` });
+  };
+
+  const removeModel = (group: "cap" | "box" | "flashing", id: string) => {
+    const updated = { ...models, [group]: models[group].filter(m => m.id !== id) };
+    setModels(updated);
+    saveCustomModels(updated);
+    toast({ title: "Модель удалена" });
+  };
+
+  return (
+    <section className="card-soft p-8">
+      <div className="flex items-center gap-2 mb-4">
+        <Package className="w-5 h-5 text-primary" />
+        <h2 className="text-lg font-bold text-foreground">Пользовательские модели</h2>
+      </div>
+      <p className="text-sm text-muted-foreground mb-5">
+        Добавляйте свои модели изделий. Изображения можно загрузить в секции ниже.
+      </p>
+
+      {/* Group tabs */}
+      <div className="flex gap-2 mb-4">
+        {(["cap", "box", "flashing"] as const).map(g => (
+          <Button
+            key={g}
+            variant={activeGroup === g ? "default" : "outline"}
+            size="sm"
+            className="rounded-xl"
+            onClick={() => setActiveGroup(g)}
+          >
+            {groupLabels[g]}
+          </Button>
+        ))}
+      </div>
+
+      {/* Existing custom models */}
+      {models[activeGroup].length > 0 && (
+        <div className="space-y-2 mb-4">
+          {models[activeGroup].map(m => (
+            <div key={m.id} className="flex items-center gap-3 bg-muted/50 rounded-xl px-4 py-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-foreground">{m.name}</p>
+                <p className="text-xs text-muted-foreground truncate">{m.description}</p>
+              </div>
+              <button onClick={() => removeModel(activeGroup, m.id)}
+                className="text-muted-foreground hover:text-destructive transition-colors">
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add new */}
+      <div className="flex gap-2 items-end">
+        <div className="flex-1">
+          <label className="text-xs font-semibold text-foreground">Название</label>
+          <Input value={newName} onChange={(e) => setNewName(e.target.value)}
+            placeholder="Название модели" className="mt-1 bg-muted border-0 rounded-xl" />
+        </div>
+        <div className="flex-1">
+          <label className="text-xs font-semibold text-foreground">Описание</label>
+          <Input value={newDesc} onChange={(e) => setNewDesc(e.target.value)}
+            placeholder="Краткое описание" className="mt-1 bg-muted border-0 rounded-xl"
+            onKeyDown={(e) => { if (e.key === "Enter") addModel(); }} />
+        </div>
+        <Button onClick={addModel} className="rounded-xl" size="sm">
+          <Plus className="w-4 h-4 mr-1" /> Добавить
+        </Button>
+      </div>
+    </section>
+  );
+};
+
+// === Password Manager ===
+const PasswordManager = () => {
+  const [current, setCurrent] = useState("");
+  const [newPass, setNewPass] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState("");
+
+  const handleChange = () => {
+    setError("");
+    if (current !== getPassword()) { setError("Неверный текущий пароль"); return; }
+    if (newPass.length < 3) { setError("Минимум 3 символа"); return; }
+    if (newPass !== confirm) { setError("Пароли не совпадают"); return; }
+    setPassword(newPass);
+    setCurrent(""); setNewPass(""); setConfirm("");
+    toast({ title: "Пароль изменён" });
+  };
+
+  return (
+    <section className="card-soft p-8">
+      <div className="flex items-center gap-2 mb-4">
+        <Lock className="w-5 h-5 text-primary" />
+        <h2 className="text-lg font-bold text-foreground">Смена пароля</h2>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div>
+          <label className="text-xs font-semibold text-foreground">Текущий пароль</label>
+          <Input type="password" value={current} onChange={(e) => setCurrent(e.target.value)}
+            className="mt-1 bg-muted border-0 rounded-xl" placeholder="••••" />
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-foreground">Новый пароль</label>
+          <Input type="password" value={newPass} onChange={(e) => setNewPass(e.target.value)}
+            className="mt-1 bg-muted border-0 rounded-xl" placeholder="••••" />
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-foreground">Подтверждение</label>
+          <Input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)}
+            className="mt-1 bg-muted border-0 rounded-xl" placeholder="••••"
+            onKeyDown={(e) => { if (e.key === "Enter") handleChange(); }} />
+        </div>
+      </div>
+      {error && <p className="text-sm text-destructive mt-2">{error}</p>}
+      <Button onClick={handleChange} className="mt-3 rounded-xl" size="sm">Сменить пароль</Button>
+    </section>
+  );
+};
+
+// === Product Image Manager ===
 const ProductImageManager = () => {
   const [images, setImages] = useState<ProductImageConfig>(getStoredImages);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -68,9 +228,9 @@ const ProductImageManager = () => {
   };
 
   const groups: { key: "cap" | "box" | "flashing"; title: string; items: { id: string; name: string }[] }[] = [
-    { key: "cap", title: "Колпаки", items: capModels.filter(m => m.id !== "custom") },
-    { key: "box", title: "Короба", items: boxModels.filter(m => m.id !== "none") },
-    { key: "flashing", title: "Оклады", items: flashingModels.filter(m => m.id !== "none") },
+    { key: "cap", title: "Колпаки", items: getAllModels("cap").filter(m => m.id !== "custom") },
+    { key: "box", title: "Короба", items: getAllModels("box").filter(m => m.id !== "none") },
+    { key: "flashing", title: "Оклады", items: getAllModels("flashing").filter(m => m.id !== "none") },
   ];
 
   return (
@@ -180,7 +340,7 @@ const SettingsPage = () => {
         <div className="container max-w-5xl py-6 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-primary-foreground">Настройки</h1>
-            <p className="text-sm text-primary-foreground/60 mt-1">Цены, матрица, изображения, реквизиты</p>
+            <p className="text-sm text-primary-foreground/60 mt-1">Цены, модели, изображения, реквизиты</p>
           </div>
           <Link to="/">
             <Button className="gradient-accent text-accent-foreground hover:opacity-90 rounded-full font-bold px-6">
@@ -191,6 +351,9 @@ const SettingsPage = () => {
       </div>
 
       <div className="container max-w-5xl py-8 space-y-6">
+
+        {/* Password */}
+        <PasswordManager />
 
         {/* Company Defaults */}
         <section className="card-soft p-8">
@@ -203,7 +366,6 @@ const SettingsPage = () => {
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Logo */}
             <div className="md:col-span-2 flex items-center gap-4">
               <div
                 className="w-20 h-20 rounded-xl border-2 border-dashed border-border flex items-center justify-center cursor-pointer hover:border-primary transition-colors overflow-hidden bg-muted/50"
@@ -262,6 +424,9 @@ const SettingsPage = () => {
             </div>
           </div>
         </section>
+
+        {/* Custom Models */}
+        <CustomModelManager />
 
         {/* Product Images */}
         <ProductImageManager />
