@@ -180,25 +180,7 @@ const Calculator = () => {
           <AdditionalOptions />
         </motion.div>
 
-        {/* Comment */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
-          className="card-soft p-8 space-y-3"
-        >
-          <div className="flex items-center gap-2">
-            <MessageSquare className="w-5 h-5 text-primary" />
-            <label className="text-sm font-bold text-foreground">Комментарий к заказу</label>
-          </div>
-          <Textarea
-            placeholder="Введите комментарий сюда"
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            className="bg-muted border-0 resize-none rounded-xl"
-            rows={3}
-          />
-        </motion.div>
+        {/* Comment field removed */}
 
         {/* Cost Summary */}
         <CostSummary />
