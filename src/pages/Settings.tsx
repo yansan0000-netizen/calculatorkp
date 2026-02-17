@@ -480,6 +480,25 @@ npm run dev
   },
 ];
 
+const renderInline = (text: string): React.ReactNode[] => {
+  return text.split(/(`[^`]+`)/).flatMap((part, j) => {
+    if (part.startsWith("`") && part.endsWith("`")) {
+      return [<code key={j} className="bg-muted text-foreground px-1.5 py-0.5 rounded text-xs font-mono">{part.slice(1, -1)}</code>];
+    }
+    return part.split(/(\*\*[^*]+\*\*)/).flatMap((sub, k) => {
+      if (sub.startsWith("**") && sub.endsWith("**")) {
+        return [<strong key={`${j}-${k}`} className="text-foreground font-semibold">{sub.slice(2, -2)}</strong>];
+      }
+      // Handle URLs
+      return sub.split(/(https?:\/\/[^\s,)]+)/).map((frag, f) =>
+        frag.match(/^https?:\/\//) ? (
+          <a key={`${j}-${k}-${f}`} href={frag} target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2 hover:text-primary/80 break-all">{frag}</a>
+        ) : <span key={`${j}-${k}-${f}`}>{frag}</span>
+      );
+    });
+  });
+};
+
 const DocumentationSection = () => {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
@@ -504,20 +523,45 @@ const DocumentationSection = () => {
             </button>
             {openIndex === i && (
               <div className="px-4 pb-4 border-t border-border">
-                <div className="text-sm text-muted-foreground mt-3 whitespace-pre-line leading-relaxed">
-                  {section.content.split(/(`[^`]+`)/).map((part, j) =>
-                    part.startsWith("`") && part.endsWith("`") ? (
-                      <code key={j} className="bg-muted text-foreground px-1.5 py-0.5 rounded text-xs font-mono">
-                        {part.slice(1, -1)}
-                      </code>
-                    ) : part.split(/(\*\*[^*]+\*\*)/).map((sub, k) =>
-                      sub.startsWith("**") && sub.endsWith("**") ? (
-                        <strong key={`${j}-${k}`} className="text-foreground font-bold">{sub.slice(2, -2)}</strong>
-                      ) : (
-                        <span key={`${j}-${k}`}>{sub}</span>
-                      )
-                    )
-                  )}
+                <div className="text-sm text-muted-foreground mt-3 leading-relaxed space-y-3">
+                  {section.content.split(/```([\s\S]*?)```/).map((block, bi) => {
+                    if (bi % 2 === 1) {
+                      return (
+                        <pre key={bi} className="bg-muted/80 border border-border rounded-lg p-4 overflow-x-auto">
+                          <code className="text-xs font-mono text-foreground leading-6">
+                            {block.trim().split("\n").map((line, li) => (
+                              <span key={li} className="block">{line}</span>
+                            ))}
+                          </code>
+                        </pre>
+                      );
+                    }
+                    return block.split(/\n\n+/).filter(Boolean).map((para, pi) => {
+                      if (para.trim().startsWith("⚠️")) {
+                        return (
+                          <div key={`${bi}-${pi}`} className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-sm">
+                            {renderInline(para.trim())}
+                          </div>
+                        );
+                      }
+                      const lines = para.split("\n").filter(Boolean);
+                      const isList = lines.every(l => /^(\d+\.|-)/.test(l.trim()));
+                      if (isList) {
+                        const isOrdered = /^\d+\./.test(lines[0].trim());
+                        const Tag = isOrdered ? "ol" : "ul";
+                        return (
+                          <Tag key={`${bi}-${pi}`} className={`space-y-1.5 pl-5 ${isOrdered ? "list-decimal" : "list-disc"}`}>
+                            {lines.map((l, li) => (
+                              <li key={li} className="text-sm text-muted-foreground">
+                                {renderInline(l.replace(/^(\d+\.|-)\s*/, ""))}
+                              </li>
+                            ))}
+                          </Tag>
+                        );
+                      }
+                      return <p key={`${bi}-${pi}`}>{renderInline(para.trim())}</p>;
+                    });
+                  })}
                 </div>
               </div>
             )}
