@@ -13,19 +13,21 @@ export interface CompanyDefaults {
   phone: string;
   email: string;
   website: string;
-  logoDataUrl: string; // base64 data URL
+  logoDataUrl: string;
 }
 
 const defaultCompanyDefaults: CompanyDefaults = {
   companyName: "", inn: "", address: "", phone: "", email: "", website: "", logoDataUrl: "",
 };
 
-// Price matrix: priceMatrix[coating][colorCode] = price
 export type PriceMatrix = Record<string, Record<string, number>>;
 
 const defaultPriceMatrix: PriceMatrix = {
   "полиэстер": { "RAL 7024": 510 },
 };
+
+// Per-item discounts keyed by item identifier
+export type ItemDiscounts = Record<string, number>;
 
 interface CalculatorState {
   // Dimensions
@@ -54,8 +56,11 @@ interface CalculatorState {
   // Addons
   selectedAddons: AddonId[]; toggleAddon: (id: AddonId) => void;
 
-  // Discount
+  // Discount (global)
   discount: number; setDiscount: (v: number) => void;
+
+  // Per-item discounts
+  itemDiscounts: ItemDiscounts; setItemDiscount: (key: string, value: number) => void;
 
   // Lists
   coatings: string[]; setCoatings: (v: string[]) => void;
@@ -101,6 +106,7 @@ export const CalculatorProvider = ({ children }: { children: ReactNode }) => {
   const [flashingModel, setFlashingModel] = useState<FlashingModel>("none");
   const [selectedAddons, setSelectedAddons] = useState<AddonId[]>([]);
   const [discount, setDiscount] = useState(0);
+  const [itemDiscounts, setItemDiscounts] = useState<ItemDiscounts>({});
 
   const [coatings, setCoatings] = useState(defaultCoatings);
   const [colors, setColors] = useState(defaultColors);
@@ -113,12 +119,10 @@ export const CalculatorProvider = ({ children }: { children: ReactNode }) => {
     } catch { return defaultCompanyDefaults; }
   });
 
-  // Persist company defaults
   useEffect(() => {
     localStorage.setItem("pipe_company_defaults", JSON.stringify(companyDefaults));
   }, [companyDefaults]);
 
-  // Auto-lookup metal price from matrix when coating/color changes
   useEffect(() => {
     const price = priceMatrix[metalCoating]?.[metalColor];
     if (price && price > 0) {
@@ -126,7 +130,6 @@ export const CalculatorProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [metalCoating, metalColor, priceMatrix]);
 
-  // Persist price matrix
   useEffect(() => {
     localStorage.setItem("pipe_price_matrix", JSON.stringify(priceMatrix));
   }, [priceMatrix]);
@@ -144,6 +147,10 @@ export const CalculatorProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
+  const setItemDiscount = (key: string, value: number) => {
+    setItemDiscounts(prev => ({ ...prev, [key]: Math.min(100, Math.max(0, value)) }));
+  };
+
   return (
     <CalculatorContext.Provider value={{
       dimensionX, setDimensionX, dimensionY, setDimensionY,
@@ -156,6 +163,7 @@ export const CalculatorProvider = ({ children }: { children: ReactNode }) => {
       flashingModel, setFlashingModel,
       selectedAddons, toggleAddon,
       discount, setDiscount,
+      itemDiscounts, setItemDiscount,
       coatings, setCoatings, colors, setColors,
       comment, setComment,
       companyDefaults, setCompanyDefaults,

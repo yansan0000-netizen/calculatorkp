@@ -2,22 +2,49 @@ import { useCalculator } from "@/context/CalculatorContext";
 import { capModels, boxModels, flashingModels, CapModel, BoxModel, FlashingModel } from "@/data/calculatorData";
 import { Crown, Box, Layers } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import capClassicImg from "@/assets/cap-classic.jpg";
-import capModernImg from "@/assets/cap-modern.jpg";
-import boxSmoothImg from "@/assets/box-smooth.jpg";
-import flashingImg from "@/assets/flashing.jpg";
 
-const capImages: Record<string, string> = {
-  classic_simple: capClassicImg,
-  classic_slatted: capClassicImg,
-  modern_simple: capModernImg,
-  modern_slatted: capModernImg,
+// Default images
+import capClassicSimpleImg from "@/assets/cap-classic-simple.png";
+import capClassicSlattedImg from "@/assets/cap-classic-slatted.png";
+import capModernSlattedImg from "@/assets/cap-modern-slatted.png";
+import boxLamellarImg from "@/assets/box-lamellar.png";
+import flashingProfiledImg from "@/assets/flashing-profiled.png";
+
+export const defaultCapImages: Record<string, string> = {
+  classic_simple: capClassicSimpleImg,
+  classic_slatted: capClassicSlattedImg,
+  modern_simple: "", // в прорисовке
+  modern_slatted: capModernSlattedImg,
 };
 
-const boxImages: Record<string, string> = {
-  smooth: boxSmoothImg,
-  lamellar: boxSmoothImg,
+export const defaultBoxImages: Record<string, string> = {
+  smooth: "", // в прорисовке
+  lamellar: boxLamellarImg,
 };
+
+export const defaultFlashingImages: Record<string, string> = {
+  flat: "", // в прорисовке
+  profiled: flashingProfiledImg,
+};
+
+function getProductImages(): {
+  cap: Record<string, string>;
+  box: Record<string, string>;
+  flashing: Record<string, string>;
+} {
+  try {
+    const saved = localStorage.getItem("pipe_product_images");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return {
+        cap: { ...defaultCapImages, ...parsed.cap },
+        box: { ...defaultBoxImages, ...parsed.box },
+        flashing: { ...defaultFlashingImages, ...parsed.flashing },
+      };
+    }
+  } catch {}
+  return { cap: defaultCapImages, box: defaultBoxImages, flashing: defaultFlashingImages };
+}
 
 type Section<T extends string> = {
   title: string;
@@ -58,7 +85,7 @@ function SelectionGroup<T extends string>({ title, icon, items, value, onChange,
             >
               <div className="flex gap-3 items-center">
                 {img && (
-                  <img src={img} alt={item.name} className="w-14 h-14 object-cover rounded-lg" />
+                  <img src={img} alt={item.name} className="w-14 h-14 object-cover rounded-lg bg-card" />
                 )}
                 <div className="flex-1 min-w-0">
                   <p className={`text-sm font-bold ${selected ? "text-primary" : "text-foreground"}`}>
@@ -91,6 +118,7 @@ function SelectionGroup<T extends string>({ title, icon, items, value, onChange,
 
 const ProductSelection = () => {
   const { capModel, setCapModel, boxModel, setBoxModel, flashingModel, setFlashingModel } = useCalculator();
+  const images = getProductImages();
 
   return (
     <div className="space-y-8">
@@ -100,7 +128,7 @@ const ProductSelection = () => {
         items={capModels}
         value={capModel}
         onChange={setCapModel}
-        images={capImages}
+        images={images.cap}
       />
       <SelectionGroup<BoxModel>
         title="Модель короба"
@@ -108,7 +136,7 @@ const ProductSelection = () => {
         items={boxModels}
         value={boxModel}
         onChange={setBoxModel}
-        images={boxImages}
+        images={images.box}
       />
       <SelectionGroup<FlashingModel>
         title="Тип оклада"
@@ -116,7 +144,7 @@ const ProductSelection = () => {
         items={flashingModels}
         value={flashingModel}
         onChange={setFlashingModel}
-        images={{ flat: flashingImg, profiled: flashingImg }}
+        images={images.flashing}
       />
     </div>
   );
