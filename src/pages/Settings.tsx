@@ -2,7 +2,7 @@ import { useCalculator } from "@/context/CalculatorContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { ArrowRight, Plus, Trash2, Grid3x3, Building2, Upload, Image, ImagePlus, Lock, Package } from "lucide-react";
+import { ArrowRight, Plus, Trash2, Grid3x3, Building2, Upload, Image, ImagePlus, Lock, Package, BookOpen, ChevronDown } from "lucide-react";
 import { useState, useRef } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { NumericInput } from "@/components/calculator/DimensionsForm";
@@ -298,6 +298,187 @@ const ProductImageManager = () => {
   );
 };
 
+// === Documentation Section ===
+const docSections = [
+  {
+    title: "Общая структура приложения",
+    content: `Калькулятор системы PIPE — веб-приложение для расчёта стоимости дымоходных систем и формирования коммерческих предложений (КП) в формате PDF.
+
+**Основные страницы:**
+• **Калькулятор** (/) — ввод размеров, выбор изделий, расчёт стоимости, экспорт PDF
+• **Настройки** (/settings) — цены, матрица, реквизиты, изображения, документация
+• **История** (/history) — архив сформированных КП с возможностью повторной генерации PDF`,
+  },
+  {
+    title: "Параметры трубы (размеры)",
+    content: `Все расчёты основаны на 4 параметрах трубы:
+
+• **X** — ширина трубы (мм)
+• **Y** — глубина трубы (мм)
+• **H** — высота над кровлей (мм)
+• **α** — угол наклона кровли (°)
+
+Эти параметры влияют на стоимость каждого изделия через формулы расчёта.`,
+  },
+  {
+    title: "Формулы расчёта — Колпаки",
+    content: `Стоимость колпака зависит от модели, размеров X и Y, и цены металла.
+
+**Классика простой:**
+\`((X×Y×0.001 + 1500) + (X+Y)×0.002 × (0.25 + 0.00075×X) × ЦенаМеталла) × 2\`
+
+**Классика реечный:**
+\`((X×Y×0.0015 + 1500) + (X+Y)×0.002 × (0.625 + 0.00075×X) × ЦенаМеталла) × 2\`
+
+**Модерн простой:**
+\`((X×Y×0.001 + 1000) + (X+Y)×0.002 × (0.25 + 0.00065×X) × ЦенаМеталла) × 2\`
+
+**Модерн реечный:**
+\`((X×Y×0.0015 + 1500) + (X+Y)×0.002 × (0.625 + 0.00065×X) × ЦенаМеталла) × 2\`
+
+**По эскизу** — цена рассчитывается индивидуально.`,
+  },
+  {
+    title: "Формулы расчёта — Короба",
+    content: `Стоимость короба зависит от модели, размеров X, Y, H, и цены металла.
+
+**Простой гладкий:**
+\`((X×Y×0.0025 + 2500) + (X+Y)×0.002 × (H×0.001) × ЦенаМеталла) × 2\`
+
+**Ламельный:**
+\`((X×Y×0.0025 + 2500)×2 + (X+Y)×0.002 × 1.6 × (H×0.001) × ЦенаМеталла) × 2.15\``,
+  },
+  {
+    title: "Формулы расчёта — Оклады",
+    content: `Стоимость оклада зависит от модели, размеров X и Y, и цены металла.
+
+**Для плоских покрытий:**
+\`((X×Y×0.002 + 2000) + (X×0.00125 + Y×0.00085) × ЦенаМеталла) × 2\`
+
+**Для профилированных покрытий:**
+\`((X×Y×0.002 + 3000) + (X×0.00125 + Y×0.001) × ЦенаМеталла + (X+0.5)×500) × 2\``,
+  },
+  {
+    title: "Формулы расчёта — Дополнительные опции",
+    content: `**Сетка от птиц:**
+\`((X+Y) × 0.0005 × ЦенаСетки × 1.2 + 500) × 2\`
+
+**Жаростойкая вставка:**
+\`(X×Y × 0.000001 × 1.2 × ЦенаНержавейки + 500) × 2\`
+
+**Нижняя крышка:**
+\`(X×Y × 0.000001 × 1.2 × ЦенаМеталла + 500) × 2\`
+
+**Проходка газового котла:**
+• Классика — фиксировано 2 500 ₽
+• Модерн — фиксировано 1 800 ₽
+
+**Установочная рамка:**
+\`((X+Y) × 0.0005 × ЦенаЦинка065 × 1.2 + 500) × 2\`
+
+**Установочный каркас:**
+\`(((X+Y) × 0.001 + (H×0.001) × 0.004) × ЦенаЦинка065 × 1.2 + 2500) × 2\``,
+  },
+  {
+    title: "Цены материалов и матрица",
+    content: `**4 базовые цены** задаются вручную или через матрицу:
+• **Цена металла** — основной множитель для колпаков, коробов и окладов
+• **Цена сетки** — для опции «Сетка от птиц»
+• **Цена нержавейки** — для опции «Жаростойкая вставка»
+• **Цена цинка 0,65** — для установочных рамок и каркасов
+
+**Матрица цен:** таблица Покрытие × Цвет, где каждая ячейка — цена металла (₽). При выборе покрытия и цвета в калькуляторе, «Цена металла» подставляется автоматически из матрицы.`,
+  },
+  {
+    title: "Система скидок",
+    content: `Скидки применяются в два этапа:
+
+1. **Индивидуальные скидки** — процент скидки на каждую позицию отдельно (колпак, короб, оклад, каждая доп. опция)
+2. **Общая скидка** — процент от суммы после индивидуальных скидок
+
+**Формула итога:**
+\`Итого = Σ(Цена_i × (1 - Скидка_i%)) × (1 - ОбщаяСкидка%)\``,
+  },
+  {
+    title: "Формирование PDF (КП)",
+    content: `PDF-документ содержит:
+• Шапку с логотипом и реквизитами компании (из настроек)
+• Данные клиента (название, контактное лицо, телефон, email)
+• Таблицу спецификации с позициями, скидками и ценами
+• Комментарий к заказу
+• Итоговую стоимость
+
+Каждое сформированное КП автоматически сохраняется в историю.`,
+  },
+  {
+    title: "Пользовательские модели",
+    content: `В настройках можно добавлять свои модели колпаков, коробов и окладов. Для пользовательских моделей:
+• Формула расчёта не применяется (цена = 0, по эскизу)
+• Можно загрузить изображение в секции «Изображения изделий»
+• Модели сохраняются в localStorage браузера`,
+  },
+  {
+    title: "Хранение данных",
+    content: `Все данные хранятся локально в браузере (localStorage):
+• Матрица цен на металл
+• Реквизиты компании и логотип
+• Пользовательские модели изделий
+• Изображения изделий
+• История расчётов
+• Пароль доступа
+
+⚠️ При очистке данных браузера все настройки будут сброшены.`,
+  },
+];
+
+const DocumentationSection = () => {
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+
+  return (
+    <section className="card-soft p-8">
+      <div className="flex items-center gap-2 mb-2">
+        <BookOpen className="w-5 h-5 text-primary" />
+        <h2 className="text-lg font-bold text-foreground">Документация</h2>
+      </div>
+      <p className="text-sm text-muted-foreground mb-5">
+        Описание логики расчёта, формул ценообразования и работы приложения.
+      </p>
+      <div className="space-y-2">
+        {docSections.map((section, i) => (
+          <div key={i} className="border border-border rounded-xl overflow-hidden">
+            <button
+              onClick={() => setOpenIndex(openIndex === i ? null : i)}
+              className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-muted/50 transition-colors"
+            >
+              <span className="text-sm font-bold text-foreground">{section.title}</span>
+              <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${openIndex === i ? "rotate-180" : ""}`} />
+            </button>
+            {openIndex === i && (
+              <div className="px-4 pb-4 border-t border-border">
+                <div className="text-sm text-muted-foreground mt-3 whitespace-pre-line leading-relaxed">
+                  {section.content.split(/(`[^`]+`)/).map((part, j) =>
+                    part.startsWith("`") && part.endsWith("`") ? (
+                      <code key={j} className="bg-muted text-foreground px-1.5 py-0.5 rounded text-xs font-mono">
+                        {part.slice(1, -1)}
+                      </code>
+                    ) : part.split(/(\*\*[^*]+\*\*)/).map((sub, k) =>
+                      sub.startsWith("**") && sub.endsWith("**") ? (
+                        <strong key={`${j}-${k}`} className="text-foreground font-bold">{sub.slice(2, -2)}</strong>
+                      ) : (
+                        <span key={`${j}-${k}`}>{sub}</span>
+                      )
+                    )
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+};
+
 const SettingsPage = () => {
   const {
     coatings, setCoatings,
@@ -549,6 +730,9 @@ const SettingsPage = () => {
             }} className="rounded-xl"><Plus className="w-4 h-4" /></Button>
           </div>
         </section>
+
+        {/* Documentation */}
+        <DocumentationSection />
       </div>
     </div>
   );
