@@ -1,6 +1,6 @@
 import { useCalculator } from "@/context/CalculatorContext";
 import { capModels, boxModels, flashingModels, CapModel, BoxModel, FlashingModel } from "@/data/calculatorData";
-import { Crown, Box, Layers } from "lucide-react";
+import { Crown, Box, Layers, Check, ImageOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 // Default images
@@ -13,21 +13,21 @@ import flashingProfiledImg from "@/assets/flashing-profiled.png";
 export const defaultCapImages: Record<string, string> = {
   classic_simple: capClassicSimpleImg,
   classic_slatted: capClassicSlattedImg,
-  modern_simple: "", // в прорисовке
+  modern_simple: "",
   modern_slatted: capModernSlattedImg,
 };
 
 export const defaultBoxImages: Record<string, string> = {
-  smooth: "", // в прорисовке
+  smooth: "",
   lamellar: boxLamellarImg,
 };
 
 export const defaultFlashingImages: Record<string, string> = {
-  flat: "", // в прорисовке
+  flat: "",
   profiled: flashingProfiledImg,
 };
 
-function getProductImages(): {
+export function getProductImages(): {
   cap: Record<string, string>;
   box: Record<string, string>;
   flashing: Record<string, string>;
@@ -46,6 +46,25 @@ function getProductImages(): {
   return { cap: defaultCapImages, box: defaultBoxImages, flashing: defaultFlashingImages };
 }
 
+// Load custom models from localStorage
+function getCustomModels(): {
+  cap: { id: string; name: string; description: string }[];
+  box: { id: string; name: string; description: string }[];
+  flashing: { id: string; name: string; description: string }[];
+} {
+  try {
+    const saved = localStorage.getItem("pipe_custom_models");
+    return saved ? JSON.parse(saved) : { cap: [], box: [], flashing: [] };
+  } catch { return { cap: [], box: [], flashing: [] }; }
+}
+
+export function getAllModels(type: "cap" | "box" | "flashing") {
+  const custom = getCustomModels();
+  if (type === "cap") return [...capModels, ...custom.cap];
+  if (type === "box") return [...boxModels, ...custom.box];
+  return [...flashingModels, ...custom.flashing];
+}
+
 type Section<T extends string> = {
   title: string;
   icon: React.ReactNode;
@@ -61,53 +80,69 @@ function SelectionGroup<T extends string>({ title, icon, items, value, onChange,
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="space-y-3"
+      className="space-y-4"
     >
       <div className="flex items-center gap-2">
         {icon}
         <h3 className="text-lg font-bold text-foreground">{title}</h3>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
         {items.map((item) => {
           const selected = value === item.id;
           const img = images?.[item.id];
           return (
             <motion.button
               key={item.id}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={{ scale: 1.03, y: -2 }}
+              whileTap={{ scale: 0.97 }}
               onClick={() => onChange(item.id)}
-              className={`text-left p-3 rounded-xl border-2 transition-all duration-200 ${
+              className={`relative text-left rounded-2xl border-2 transition-all duration-300 overflow-hidden group ${
                 selected
-                  ? "border-primary bg-primary/5 shadow-md"
-                  : "border-border bg-muted hover:border-primary/30"
+                  ? "border-primary shadow-lg ring-2 ring-primary/20"
+                  : "border-border hover:border-primary/40 hover:shadow-md"
               }`}
             >
-              <div className="flex gap-3 items-center">
-                {img && (
-                  <img src={img} alt={item.name} className="w-14 h-14 object-cover rounded-lg bg-card" />
+              {/* Image area */}
+              <div className={`aspect-square w-full flex items-center justify-center overflow-hidden ${
+                selected ? "bg-primary/5" : "bg-muted/50"
+              }`}>
+                {img ? (
+                  <img
+                    src={img}
+                    alt={item.name}
+                    className="w-full h-full object-contain p-3 group-hover:scale-110 transition-transform duration-300"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center gap-1 text-muted-foreground/50">
+                    <ImageOff className="w-8 h-8" />
+                    <span className="text-[10px]">В прорисовке</span>
+                  </div>
                 )}
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-bold ${selected ? "text-primary" : "text-foreground"}`}>
-                    {item.name}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">{item.description}</p>
-                </div>
-                <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 transition-all ${
-                  selected ? "border-primary bg-primary" : "border-muted-foreground/30"
-                }`}>
-                  <AnimatePresence>
-                    {selected && (
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        exit={{ scale: 0 }}
-                        className="w-full h-full rounded-full bg-primary"
-                      />
-                    )}
-                  </AnimatePresence>
-                </div>
               </div>
+
+              {/* Label */}
+              <div className={`px-3 py-2.5 border-t transition-colors ${
+                selected ? "bg-primary/5 border-primary/20" : "bg-card border-border/50"
+              }`}>
+                <p className={`text-xs font-bold leading-tight ${selected ? "text-primary" : "text-foreground"}`}>
+                  {item.name}
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{item.description}</p>
+              </div>
+
+              {/* Check badge */}
+              <AnimatePresence>
+                {selected && (
+                  <motion.div
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0, opacity: 0 }}
+                    className="absolute top-2 right-2 w-6 h-6 rounded-full bg-primary flex items-center justify-center shadow-md"
+                  >
+                    <Check className="w-3.5 h-3.5 text-primary-foreground" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.button>
           );
         })}
@@ -119,31 +154,34 @@ function SelectionGroup<T extends string>({ title, icon, items, value, onChange,
 const ProductSelection = () => {
   const { capModel, setCapModel, boxModel, setBoxModel, flashingModel, setFlashingModel } = useCalculator();
   const images = getProductImages();
+  const allCap = getAllModels("cap");
+  const allBox = getAllModels("box");
+  const allFlashing = getAllModels("flashing");
 
   return (
     <div className="space-y-8">
-      <SelectionGroup<CapModel>
+      <SelectionGroup<string>
         title="Модель колпака"
         icon={<Crown className="w-5 h-5 text-primary" />}
-        items={capModels}
+        items={allCap}
         value={capModel}
-        onChange={setCapModel}
+        onChange={(v) => setCapModel(v as CapModel)}
         images={images.cap}
       />
-      <SelectionGroup<BoxModel>
+      <SelectionGroup<string>
         title="Модель короба"
         icon={<Box className="w-5 h-5 text-primary" />}
-        items={boxModels}
+        items={allBox}
         value={boxModel}
-        onChange={setBoxModel}
+        onChange={(v) => setBoxModel(v as BoxModel)}
         images={images.box}
       />
-      <SelectionGroup<FlashingModel>
+      <SelectionGroup<string>
         title="Тип оклада"
         icon={<Layers className="w-5 h-5 text-primary" />}
-        items={flashingModels}
+        items={allFlashing}
         value={flashingModel}
-        onChange={setFlashingModel}
+        onChange={(v) => setFlashingModel(v as FlashingModel)}
         images={images.flashing}
       />
     </div>
