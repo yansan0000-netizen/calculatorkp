@@ -30,6 +30,7 @@ interface PdfData {
   flashingModel: FlashingModel;
   selectedAddons: AddonId[];
   discount: number;
+  itemDiscounts?: Record<string, number>;
   comment: string;
   company: CompanyInfo;
   companyDefaults?: CompanyDefaults;
@@ -46,39 +47,45 @@ export async function generateCommercialPdf(data: PdfData) {
     metalPrice, meshPrice, stainlessPrice, zincPrice065,
     capModel, boxModel, flashingModel, selectedAddons } = data;
 
-  interface Row { name: string; price: number }
+  interface Row { name: string; price: number; key: string }
   const rows: Row[] = [];
 
   if (capModel !== "custom") {
     const info = capModels.find(c => c.id === capModel);
-    rows.push({ name: `Колпак: ${info?.name}`, price: calcCapPrice(capModel, X, Y, metalPrice) });
+    rows.push({ key: "cap", name: `Колпак: ${info?.name}`, price: calcCapPrice(capModel, X, Y, metalPrice) });
   } else {
-    rows.push({ name: "Колпак: по эскизу", price: 0 });
+    rows.push({ key: "cap", name: "Колпак: по эскизу", price: 0 });
   }
 
   if (boxModel !== "none") {
     const info = boxModels.find(b => b.id === boxModel);
-    rows.push({ name: `Короб: ${info?.name}`, price: calcBoxPrice(boxModel, X, Y, H, metalPrice) });
+    rows.push({ key: "box", name: `Короб: ${info?.name}`, price: calcBoxPrice(boxModel, X, Y, H, metalPrice) });
   }
 
   if (flashingModel !== "none") {
     const info = flashingModels.find(f => f.id === flashingModel);
-    rows.push({ name: `Оклад: ${info?.name}`, price: calcFlashingPrice(flashingModel, X, Y, metalPrice) });
+    rows.push({ key: "flashing", name: `Оклад: ${info?.name}`, price: calcFlashingPrice(flashingModel, X, Y, metalPrice) });
   }
 
   selectedAddons.forEach(id => {
     const opt = addonOptions.find(a => a.id === id);
     if (opt) {
       rows.push({
+        key: `addon_${id}`,
         name: opt.name,
         price: calcAddonPrice(id, capModel, X, Y, H, metalPrice, meshPrice, stainlessPrice, zincPrice065),
       });
     }
   });
 
+  const itemDiscounts = data.itemDiscounts || {};
+  const totalAfterItemDiscounts = rows.reduce((s, r) => {
+    const d = itemDiscounts[(r as any).key] || 0;
+    return s + r.price * (1 - d / 100);
+  }, 0);
   const total = rows.reduce((s, r) => s + r.price, 0);
-  const discountedTotal = total * (1 - (data.discount || 0) / 100);
-  const hasDiscount = (data.discount || 0) > 0;
+  const discountedTotal = totalAfterItemDiscounts * (1 - (data.discount || 0) / 100);
+  const hasDiscount = (data.discount || 0) > 0 || Object.values(itemDiscounts).some(v => v > 0);
   const co = data.company;
   const cd = data.companyDefaults;
   const hasOurCompany = cd && (cd.companyName || cd.phone || cd.email);
@@ -166,27 +173,33 @@ export async function generateCommercialPdf(data: PdfData) {
               <tr style="background:${accentLight};">
                 <th style="text-align:left;padding:10px 12px;border-bottom:2px solid ${borderColor};color:${accentDark};font-weight:600;width:36px;">№</th>
                 <th style="text-align:left;padding:10px 12px;border-bottom:2px solid ${borderColor};color:${accentDark};font-weight:600;">Наименование</th>
+                <th style="text-align:right;padding:10px 12px;border-bottom:2px solid ${borderColor};color:${accentDark};font-weight:600;width:80px;">Скидка</th>
                 <th style="text-align:right;padding:10px 12px;border-bottom:2px solid ${borderColor};color:${accentDark};font-weight:600;width:140px;">Стоимость</th>
               </tr>
             </thead>
             <tbody>
-              ${rows.map((r, i) => `
+              ${rows.map((r, i) => {
+                const iDisc = itemDiscounts[r.key] || 0;
+                const discPrice = r.price * (1 - iDisc / 100);
+                return `
                 <tr style="${i % 2 === 1 ? `background:${accentLight};` : ""}">
                   <td style="padding:10px 12px;border-bottom:1px solid #EEE;color:#888;">${i + 1}</td>
                   <td style="padding:10px 12px;border-bottom:1px solid #EEE;font-weight:500;">${r.name}</td>
-                  <td style="padding:10px 12px;border-bottom:1px solid #EEE;text-align:right;font-weight:600;">${r.price > 0 ? fmt(r.price) : "—"}</td>
-                </tr>`).join("")}
+                  <td style="padding:10px 12px;border-bottom:1px solid #EEE;text-align:right;color:#888;">${iDisc > 0 ? `${iDisc}%` : "—"}</td>
+                  <td style="padding:10px 12px;border-bottom:1px solid #EEE;text-align:right;font-weight:600;">${r.price > 0 ? (iDisc > 0 ? `<span style="text-decoration:line-through;color:#aaa;font-size:11px;">${fmt(r.price)}</span><br>${fmt(discPrice)}` : fmt(r.price)) : "—"}</td>
+                </tr>`;
+              }).join("")}
               <tr style="background:${accentLight};">
-                <td colspan="2" style="padding:12px;text-align:right;font-weight:700;font-size:14px;color:${accentDark};border-top:2px solid ${borderColor};">ИТОГО:</td>
-                <td style="padding:12px;text-align:right;font-weight:700;font-size:16px;color:${accentDark};border-top:2px solid ${borderColor};">${fmt(total)}</td>
+                <td colspan="3" style="padding:12px;text-align:right;font-weight:700;font-size:14px;color:${accentDark};border-top:2px solid ${borderColor};">ИТОГО:</td>
+                <td style="padding:12px;text-align:right;font-weight:700;font-size:16px;color:${accentDark};border-top:2px solid ${borderColor};">${fmt(totalAfterItemDiscounts)}</td>
               </tr>
               ${hasDiscount ? `
-              <tr>
-                <td colspan="2" style="padding:8px 12px;text-align:right;color:#888;font-size:13px;">Скидка ${data.discount}%</td>
-                <td style="padding:8px 12px;text-align:right;color:#888;font-size:13px;">−${fmt(total - discountedTotal)}</td>
-              </tr>
+              ${(data.discount || 0) > 0 ? `<tr>
+                <td colspan="3" style="padding:8px 12px;text-align:right;color:#888;font-size:13px;">Общая скидка ${data.discount}%</td>
+                <td style="padding:8px 12px;text-align:right;color:#888;font-size:13px;">−${fmt(totalAfterItemDiscounts - discountedTotal)}</td>
+              </tr>` : ""}
               <tr style="background:linear-gradient(135deg, ${accentDark}, ${accentMid});">
-                <td colspan="2" style="padding:14px 12px;text-align:right;font-weight:700;font-size:15px;color:#fff;border-radius:0 0 0 8px;">ИТОГО СО СКИДКОЙ:</td>
+                <td colspan="3" style="padding:14px 12px;text-align:right;font-weight:700;font-size:15px;color:#fff;border-radius:0 0 0 8px;">ИТОГО СО СКИДКОЙ:</td>
                 <td style="padding:14px 12px;text-align:right;font-weight:700;font-size:18px;color:#fff;border-radius:0 0 8px 0;">${fmt(discountedTotal)}</td>
               </tr>` : ""}
             </tbody>

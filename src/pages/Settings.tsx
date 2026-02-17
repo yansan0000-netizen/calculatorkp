@@ -2,11 +2,141 @@ import { useCalculator } from "@/context/CalculatorContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { ArrowRight, Plus, Trash2, Grid3x3, Building2, Upload, Image } from "lucide-react";
+import { ArrowRight, Plus, Trash2, Grid3x3, Building2, Upload, Image, ImagePlus } from "lucide-react";
 import { useState, useRef } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { NumericInput } from "@/components/calculator/DimensionsForm";
 import { toast } from "@/hooks/use-toast";
+import { capModels, boxModels, flashingModels } from "@/data/calculatorData";
+import { defaultCapImages, defaultBoxImages, defaultFlashingImages } from "@/components/calculator/ProductSelection";
+
+interface ProductImageConfig {
+  cap: Record<string, string>;
+  box: Record<string, string>;
+  flashing: Record<string, string>;
+}
+
+function getStoredImages(): ProductImageConfig {
+  try {
+    const saved = localStorage.getItem("pipe_product_images");
+    return saved ? JSON.parse(saved) : { cap: {}, box: {}, flashing: {} };
+  } catch { return { cap: {}, box: {}, flashing: {} }; }
+}
+
+function saveImages(images: ProductImageConfig) {
+  localStorage.setItem("pipe_product_images", JSON.stringify(images));
+}
+
+const ProductImageManager = () => {
+  const [images, setImages] = useState<ProductImageConfig>(getStoredImages);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploadTarget, setUploadTarget] = useState<{ group: "cap" | "box" | "flashing"; id: string } | null>(null);
+
+  const defaults: Record<string, Record<string, string>> = {
+    cap: defaultCapImages,
+    box: defaultBoxImages,
+    flashing: defaultFlashingImages,
+  };
+
+  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !uploadTarget) return;
+    if (file.size > 500_000) {
+      toast({ title: "Максимум 500 КБ", variant: "destructive" });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const updated = {
+        ...images,
+        [uploadTarget.group]: { ...images[uploadTarget.group], [uploadTarget.id]: reader.result as string },
+      };
+      setImages(updated);
+      saveImages(updated);
+      toast({ title: "Изображение обновлено" });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const resetImage = (group: "cap" | "box" | "flashing", id: string) => {
+    const updated = { ...images, [group]: { ...images[group] } };
+    delete updated[group][id];
+    setImages(updated);
+    saveImages(updated);
+    toast({ title: "Изображение сброшено" });
+  };
+
+  const groups: { key: "cap" | "box" | "flashing"; title: string; items: { id: string; name: string }[] }[] = [
+    { key: "cap", title: "Колпаки", items: capModels.filter(m => m.id !== "custom") },
+    { key: "box", title: "Короба", items: boxModels.filter(m => m.id !== "none") },
+    { key: "flashing", title: "Оклады", items: flashingModels.filter(m => m.id !== "none") },
+  ];
+
+  return (
+    <section className="card-soft p-8">
+      <div className="flex items-center gap-2 mb-4">
+        <ImagePlus className="w-5 h-5 text-primary" />
+        <h2 className="text-lg font-bold text-foreground">Изображения изделий</h2>
+      </div>
+      <p className="text-sm text-muted-foreground mb-5">
+        Загрузите свои изображения для отображения в калькуляторе. PNG/JPG до 500 КБ.
+      </p>
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+
+      {groups.map(group => (
+        <div key={group.key} className="mb-6">
+          <h3 className="text-sm font-bold text-foreground mb-3">{group.title}</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {group.items.map(item => {
+              const customImg = images[group.key]?.[item.id];
+              const defaultImg = defaults[group.key]?.[item.id];
+              const currentImg = customImg || defaultImg;
+              return (
+                <div key={item.id} className="flex items-center gap-3 bg-muted/50 rounded-xl p-3">
+                  <div className="w-14 h-14 rounded-lg bg-card border border-border flex items-center justify-center overflow-hidden flex-shrink-0">
+                    {currentImg ? (
+                      <img src={currentImg} alt={item.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <Image className="w-6 h-6 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-foreground truncate">{item.name}</p>
+                    <p className="text-xs text-muted-foreground">{customImg ? "Пользовательское" : currentImg ? "По умолчанию" : "Нет изображения"}</p>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-lg h-8 px-2"
+                      onClick={() => {
+                        setUploadTarget({ group: group.key, id: item.id });
+                        fileRef.current?.click();
+                      }}
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                    </Button>
+                    {customImg && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="rounded-lg h-8 px-2 text-destructive"
+                        onClick={() => resetImage(group.key, item.id)}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </section>
+  );
+};
 
 const SettingsPage = () => {
   const {
@@ -50,7 +180,7 @@ const SettingsPage = () => {
         <div className="container max-w-5xl py-6 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-primary-foreground">Настройки</h1>
-            <p className="text-sm text-primary-foreground/60 mt-1">Цены, матрица, реквизиты компании</p>
+            <p className="text-sm text-primary-foreground/60 mt-1">Цены, матрица, изображения, реквизиты</p>
           </div>
           <Link to="/">
             <Button className="gradient-accent text-accent-foreground hover:opacity-90 rounded-full font-bold px-6">
@@ -87,22 +217,12 @@ const SettingsPage = () => {
               </div>
               <div className="flex-1">
                 <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="rounded-xl"
-                  onClick={() => fileInputRef.current?.click()}
-                >
+                <Button variant="outline" size="sm" className="rounded-xl" onClick={() => fileInputRef.current?.click()}>
                   <Upload className="w-4 h-4 mr-2" />
                   Загрузить логотип
                 </Button>
                 {companyDefaults.logoDataUrl && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="ml-2 text-destructive"
-                    onClick={() => updateField("logoDataUrl", "")}
-                  >
+                  <Button variant="ghost" size="sm" className="ml-2 text-destructive" onClick={() => updateField("logoDataUrl", "")}>
                     <Trash2 className="w-4 h-4 mr-1" /> Удалить
                   </Button>
                 )}
@@ -142,6 +262,9 @@ const SettingsPage = () => {
             </div>
           </div>
         </section>
+
+        {/* Product Images */}
+        <ProductImageManager />
 
         {/* Material Prices */}
         <section className="card-soft p-8">
