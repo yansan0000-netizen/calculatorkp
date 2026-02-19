@@ -802,6 +802,7 @@ const SettingsPage = () => {
   const [newCoating, setNewCoating] = useState("");
   const [newColorCode, setNewColorCode] = useState("");
   const [newColorName, setNewColorName] = useState("");
+  const [addingColor, setAddingColor] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -942,35 +943,102 @@ const SettingsPage = () => {
           </div>
         </section>
 
-        {/* Price Matrix */}
+        {/* Price Matrix — unified with coating/color management */}
         <section className="card-soft p-8">
           <div className="flex items-center gap-2 mb-2">
             <Grid3x3 className="w-5 h-5 text-primary" />
             <h2 className="text-lg font-bold text-foreground">Матрица цен на металл</h2>
           </div>
           <p className="text-sm text-muted-foreground mb-4">
-            Покрытие × Цвет → цена (руб). Заполненные ячейки автоматически подставляют цену металла.
+            Покрытие × Цвет → цена (руб). Добавляйте строки и столбцы прямо здесь. Заполненные ячейки подставляют цену металла автоматически.
           </p>
           <ScrollArea className="w-full">
-            <div className="min-w-[600px]">
+            <div className="min-w-[500px]">
               <table className="w-full text-xs border-collapse">
                 <thead>
                   <tr>
-                    <th className="text-left p-2 bg-muted rounded-tl-lg font-bold text-foreground sticky left-0 z-10 bg-muted min-w-[140px]">
+                    <th className="text-left p-2 bg-muted rounded-tl-lg font-bold text-foreground sticky left-0 z-10 min-w-[150px]">
                       Покрытие \ Цвет
                     </th>
-                    {colors.map(c => (
-                      <th key={c.code} className="p-2 bg-muted text-center font-semibold text-foreground min-w-[70px] whitespace-nowrap">
-                        {c.code}
+                    {colors.map((c, ci) => (
+                      <th key={c.code} className="p-1 bg-muted text-center min-w-[75px]">
+                        <div className="flex flex-col items-center gap-0.5">
+                          <span className="font-semibold text-foreground whitespace-nowrap">{c.code}</span>
+                          <button
+                            onClick={() => setColors(colors.filter((_, i) => i !== ci))}
+                            className="text-muted-foreground/50 hover:text-destructive transition-colors"
+                            title="Удалить цвет"
+                          >
+                            <Trash2 className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
                       </th>
                     ))}
+                    {/* Add color column header */}
+                    <th className="p-1 bg-muted min-w-[90px]">
+                      {addingColor ? (
+                        <div className="flex flex-col gap-1 p-1">
+                          <Input
+                            autoFocus
+                            placeholder="RAL 0000"
+                            value={newColorCode}
+                            onChange={(e) => setNewColorCode(e.target.value)}
+                            className="h-6 text-[10px] px-1 bg-background border-border rounded text-center"
+                          />
+                          <Input
+                            placeholder="Название"
+                            value={newColorName}
+                            onChange={(e) => setNewColorName(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && newColorCode.trim()) {
+                                setColors([...colors, { code: newColorCode.trim(), name: newColorName.trim() || newColorCode.trim() }]);
+                                setNewColorCode(""); setNewColorName(""); setAddingColor(false);
+                              }
+                              if (e.key === "Escape") { setNewColorCode(""); setNewColorName(""); setAddingColor(false); }
+                            }}
+                            className="h-6 text-[10px] px-1 bg-background border-border rounded text-center"
+                          />
+                          <div className="flex gap-1 justify-center">
+                            <button
+                              className="text-primary hover:text-primary/80"
+                              onClick={() => {
+                                if (newColorCode.trim()) {
+                                  setColors([...colors, { code: newColorCode.trim(), name: newColorName.trim() || newColorCode.trim() }]);
+                                  setNewColorCode(""); setNewColorName(""); setAddingColor(false);
+                                }
+                              }}
+                            ><Check className="w-3 h-3" /></button>
+                            <button className="text-muted-foreground hover:text-destructive" onClick={() => { setNewColorCode(""); setNewColorName(""); setAddingColor(false); }}>
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setAddingColor(true)}
+                          className="flex items-center gap-1 mx-auto text-muted-foreground hover:text-primary transition-colors px-2 py-1 rounded-md hover:bg-primary/10"
+                        >
+                          <Plus className="w-3 h-3" />
+                          <span className="text-[10px] font-medium">Цвет</span>
+                        </button>
+                      )}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {coatings.map((coating, ri) => (
                     <tr key={coating} className={ri % 2 === 0 ? "bg-card" : "bg-muted/30"}>
-                      <td className="p-2 font-semibold text-foreground sticky left-0 z-10 bg-inherit min-w-[140px] whitespace-nowrap">
-                        {coating}
+                      <td className="p-2 sticky left-0 z-10 bg-inherit min-w-[150px]">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-semibold text-foreground whitespace-nowrap flex-1">{coating}</span>
+                          <button
+                            onClick={() => setCoatings(coatings.filter((_, i) => i !== ri))}
+                            className="text-muted-foreground/40 hover:text-destructive transition-colors flex-shrink-0"
+                            title="Удалить покрытие"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
                       </td>
                       {colors.map(color => {
                         const val = priceMatrix[coating]?.[color.code] || "";
@@ -986,61 +1054,44 @@ const SettingsPage = () => {
                           </td>
                         );
                       })}
+                      <td />
                     </tr>
                   ))}
+                  {/* Add coating row */}
+                  <tr className="border-t border-dashed border-border">
+                    <td className="p-2 sticky left-0 bg-card z-10" colSpan={colors.length + 2}>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          placeholder="+ Добавить покрытие (Enter)"
+                          value={newCoating}
+                          onChange={(e) => setNewCoating(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && newCoating.trim()) {
+                              setCoatings([...coatings, newCoating.trim()]);
+                              setNewCoating("");
+                            }
+                          }}
+                          className="h-7 text-xs bg-transparent border-0 border-b border-dashed border-border rounded-none focus-visible:ring-0 focus-visible:border-primary max-w-xs text-muted-foreground placeholder:text-muted-foreground/50"
+                        />
+                        {newCoating.trim() && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2 text-primary"
+                            onClick={() => { setCoatings([...coatings, newCoating.trim()]); setNewCoating(""); }}
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
           </ScrollArea>
         </section>
 
-        {/* Coatings */}
-        <section className="card-soft p-8">
-          <h2 className="text-lg font-bold text-foreground mb-4">Покрытия металла</h2>
-          <div className="space-y-2 mb-4">
-            {coatings.map((c, i) => (
-              <div key={i} className="flex items-center gap-2 bg-muted/50 rounded-xl px-4 py-2">
-                <span className="text-sm text-foreground flex-1">{c}</span>
-                <button onClick={() => setCoatings(coatings.filter((_, idx) => idx !== i))}
-                  className="text-muted-foreground hover:text-destructive"><Trash2 className="w-3.5 h-3.5" /></button>
-              </div>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <Input placeholder="Новое покрытие" value={newCoating} onChange={(e) => setNewCoating(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && newCoating.trim()) { setCoatings([...coatings, newCoating.trim()]); setNewCoating(""); } }}
-              className="bg-muted border-0 rounded-xl max-w-xs" />
-            <Button variant="outline" size="sm" onClick={() => { if (newCoating.trim()) { setCoatings([...coatings, newCoating.trim()]); setNewCoating(""); } }}
-              className="rounded-xl"><Plus className="w-4 h-4" /></Button>
-          </div>
-        </section>
-
-        {/* Colors */}
-        <section className="card-soft p-8">
-          <h2 className="text-lg font-bold text-foreground mb-4">Цвета металла</h2>
-          <div className="space-y-2 mb-4">
-            {colors.map((c, i) => (
-              <div key={i} className="flex items-center gap-2 bg-muted/50 rounded-xl px-4 py-2">
-                <span className="text-sm font-bold text-foreground w-24">{c.code}</span>
-                <span className="text-sm text-muted-foreground flex-1">{c.name}</span>
-                <button onClick={() => setColors(colors.filter((_, idx) => idx !== i))}
-                  className="text-muted-foreground hover:text-destructive"><Trash2 className="w-3.5 h-3.5" /></button>
-              </div>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <Input placeholder="Код (RAL ...)" value={newColorCode} onChange={(e) => setNewColorCode(e.target.value)}
-              className="bg-muted border-0 rounded-xl w-32" />
-            <Input placeholder="Название" value={newColorName} onChange={(e) => setNewColorName(e.target.value)}
-              className="bg-muted border-0 rounded-xl flex-1" />
-            <Button variant="outline" size="sm" onClick={() => {
-              if (newColorCode.trim() && newColorName.trim()) {
-                setColors([...colors, { code: newColorCode.trim(), name: newColorName.trim() }]);
-                setNewColorCode(""); setNewColorName("");
-              }
-            }} className="rounded-xl"><Plus className="w-4 h-4" /></Button>
-          </div>
-        </section>
 
         {/* Documentation */}
         <DocumentationSection />
