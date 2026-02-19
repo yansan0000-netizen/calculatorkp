@@ -8,7 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { NumericInput } from "@/components/calculator/DimensionsForm";
 import { toast } from "@/hooks/use-toast";
 import { capModels, boxModels, flashingModels } from "@/data/calculatorData";
-import { defaultCapImages, defaultBoxImages, defaultFlashingImages, getAllModels } from "@/components/calculator/ProductSelection";
+import { defaultCapImages, defaultBoxImages, defaultFlashingImages, getAllModels, getHiddenModels, saveHiddenModels } from "@/components/calculator/ProductSelection";
 import { getPassword, setPassword } from "@/components/PasswordGate";
 import { FormulaEditor } from "@/components/calculator/FormulaEditor";
 
@@ -209,9 +209,11 @@ function saveCustomNames(names: CustomNames) {
 const ProductImageManager = () => {
   const [images, setImages] = useState<ProductImageConfig>(getStoredImages);
   const [customNames, setCustomNames] = useState<CustomNames>(getCustomNames);
+  const [hiddenModels, setHiddenModels] = useState(getHiddenModels);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
-  const [editDesc, setEditDesc] = useState("");
+  const [addingGroup, setAddingGroup] = useState<"cap" | "box" | "flashing" | null>(null);
+  const [newModelName, setNewModelName] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploadTarget, setUploadTarget] = useState<{ group: "cap" | "box" | "flashing"; id: string } | null>(null);
 
@@ -247,25 +249,6 @@ const ProductImageManager = () => {
     delete updated[group][id];
     setImages(updated);
     saveImages(updated);
-    toast({ title: "Изображение сброшено" });
-  };
-
-  const startEdit = (group: "cap" | "box" | "flashing", item: { id: string; name: string; description?: string }) => {
-    const saved = customNames[group]?.[item.id];
-    setEditingId(`${group}_${item.id}`);
-    setEditName(saved?.name ?? item.name);
-    setEditDesc(saved?.description ?? (item as any).description ?? "");
-  };
-
-  const saveEdit = (group: "cap" | "box" | "flashing", id: string) => {
-    const updated = {
-      ...customNames,
-      [group]: { ...customNames[group], [id]: { name: editName.trim(), description: editDesc.trim() } },
-    };
-    setCustomNames(updated);
-    saveCustomNames(updated);
-    setEditingId(null);
-    toast({ title: "Название обновлено" });
   };
 
   const resetName = (group: "cap" | "box" | "flashing", id: string) => {
@@ -273,14 +256,74 @@ const ProductImageManager = () => {
     delete updated[group][id];
     setCustomNames(updated);
     saveCustomNames(updated);
-    toast({ title: "Название сброшено" });
   };
 
-  const groups: { key: "cap" | "box" | "flashing"; title: string; items: { id: string; name: string; description: string }[] }[] = [
-    { key: "cap", title: "Колпаки", items: getAllModels("cap").filter(m => m.id !== "custom") as any },
-    { key: "box", title: "Короба", items: getAllModels("box").filter(m => m.id !== "none") as any },
-    { key: "flashing", title: "Оклады", items: getAllModels("flashing").filter(m => m.id !== "none") as any },
-  ];
+  const saveEdit = (group: "cap" | "box" | "flashing", id: string) => {
+    if (!editName.trim()) { setEditingId(null); return; }
+    const updated = {
+      ...customNames,
+      [group]: { ...customNames[group], [id]: { name: editName.trim(), description: "" } },
+    };
+    setCustomNames(updated);
+    saveCustomNames(updated);
+    setEditingId(null);
+    toast({ title: "Название обновлено" });
+  };
+
+  const hideModel = (group: "cap" | "box" | "flashing", id: string) => {
+    const updated = { ...hiddenModels, [group]: [...hiddenModels[group], id] };
+    setHiddenModels(updated);
+    saveHiddenModels(updated);
+    toast({ title: "Модель скрыта из калькулятора" });
+  };
+
+  const showModel = (group: "cap" | "box" | "flashing", id: string) => {
+    const updated = { ...hiddenModels, [group]: hiddenModels[group].filter(x => x !== id) };
+    setHiddenModels(updated);
+    saveHiddenModels(updated);
+  };
+
+  const addCustomModel = (group: "cap" | "box" | "flashing") => {
+    if (!newModelName.trim()) return;
+    const id = `custom_${Date.now()}`;
+    // Save to custom models
+    const saved = localStorage.getItem("pipe_custom_models");
+    const customModels = saved ? JSON.parse(saved) : { cap: [], box: [], flashing: [] };
+    customModels[group] = [...customModels[group], { id, name: newModelName.trim(), description: "" }];
+    localStorage.setItem("pipe_custom_models", JSON.stringify(customModels));
+    setNewModelName("");
+    setAddingGroup(null);
+    toast({ title: `Добавлено: ${newModelName.trim()}` });
+    // force re-render
+    setImages({ ...images });
+  };
+
+  const removeCustomModel = (group: "cap" | "box" | "flashing", id: string) => {
+    const saved = localStorage.getItem("pipe_custom_models");
+    const customModels = saved ? JSON.parse(saved) : { cap: [], box: [], flashing: [] };
+    customModels[group] = customModels[group].filter((m: any) => m.id !== id);
+    localStorage.setItem("pipe_custom_models", JSON.stringify(customModels));
+    resetImage(group, id);
+    resetName(group, id);
+    toast({ title: "Модель удалена" });
+    setImages({ ...images });
+  };
+
+  // All models including hidden ones (for settings display)
+  const allBuiltIn = {
+    cap: capModels.filter(m => m.id !== "custom"),
+    box: boxModels.filter(m => m.id !== "none"),
+    flashing: flashingModels.filter(m => m.id !== "none"),
+  };
+  const getCustomList = (group: "cap" | "box" | "flashing") => {
+    try {
+      const saved = localStorage.getItem("pipe_custom_models");
+      return saved ? JSON.parse(saved)[group] : [];
+    } catch { return []; }
+  };
+
+  const groupLabels: Record<string, string> = { cap: "Колпаки", box: "Короба", flashing: "Оклады" };
+  const groups = (["cap", "box", "flashing"] as const);
 
   return (
     <section className="card-soft p-8">
@@ -289,105 +332,183 @@ const ProductImageManager = () => {
         <h2 className="text-lg font-bold text-foreground">Изображения изделий</h2>
       </div>
       <p className="text-sm text-muted-foreground mb-5">
-        Загрузите изображения и редактируйте названия. PNG/JPG до 500 КБ.
+        Управляйте моделями: загружайте изображения, переименовывайте, скрывайте и добавляйте новые.
       </p>
       <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
 
-      {groups.map(group => (
-        <div key={group.key} className="mb-6">
-          <h3 className="text-sm font-bold text-foreground mb-3">{group.title}</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {group.items.map(item => {
-              const customImg = images[group.key]?.[item.id];
-              const defaultImg = defaults[group.key]?.[item.id];
-              const currentImg = customImg || defaultImg;
-              const customName = customNames[group.key]?.[item.id];
-              const displayName = customName?.name ?? item.name;
-              const displayDesc = customName?.description ?? item.description;
-              const isEditing = editingId === `${group.key}_${item.id}`;
-              return (
-                <div key={item.id} className="bg-muted/50 rounded-xl p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-14 h-14 rounded-lg bg-card border border-border flex items-center justify-center overflow-hidden flex-shrink-0">
-                      {currentImg ? (
-                        <img src={currentImg} alt={displayName} className="w-full h-full object-cover" />
-                      ) : (
-                        <Image className="w-6 h-6 text-muted-foreground" />
-                      )}
-                    </div>
-                    {isEditing ? (
-                      <div className="flex-1 min-w-0 space-y-1">
+      {groups.map(groupKey => {
+        const builtInItems = allBuiltIn[groupKey];
+        const customItems: { id: string; name: string; description: string }[] = getCustomList(groupKey);
+
+        return (
+          <div key={groupKey} className="mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold text-foreground">{groupLabels[groupKey]}</h3>
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-xl h-7 px-3 text-xs gap-1"
+                onClick={() => { setAddingGroup(groupKey); setNewModelName(""); }}
+              >
+                <Plus className="w-3.5 h-3.5" /> Добавить
+              </Button>
+            </div>
+
+            {/* Add form */}
+            {addingGroup === groupKey && (
+              <div className="flex gap-2 mb-3">
+                <Input
+                  autoFocus
+                  placeholder="Название новой модели"
+                  value={newModelName}
+                  onChange={(e) => setNewModelName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") addCustomModel(groupKey); if (e.key === "Escape") setAddingGroup(null); }}
+                  className="bg-muted border-0 rounded-xl text-sm"
+                />
+                <Button size="sm" className="rounded-xl" onClick={() => addCustomModel(groupKey)}>
+                  <Check className="w-3.5 h-3.5" />
+                </Button>
+                <Button size="sm" variant="ghost" className="rounded-xl" onClick={() => setAddingGroup(null)}>
+                  <X className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              {/* Built-in models */}
+              {builtInItems.map(item => {
+                const isHidden = hiddenModels[groupKey].includes(item.id);
+                const customImg = images[groupKey]?.[item.id];
+                const defaultImg = defaults[groupKey]?.[item.id];
+                const currentImg = customImg || defaultImg;
+                const customName = customNames[groupKey]?.[item.id];
+                const displayName = customName?.name ?? item.name;
+                const isEditing = editingId === `${groupKey}_${item.id}`;
+
+                return (
+                  <div key={item.id} className={`rounded-xl p-3 border transition-all ${isHidden ? "bg-muted/20 border-dashed border-border/50 opacity-60" : "bg-muted/50 border-transparent"}`}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-lg bg-card border border-border flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {currentImg ? (
+                          <img src={currentImg} alt={displayName} className="w-full h-full object-cover" />
+                        ) : (
+                          <Image className="w-5 h-5 text-muted-foreground" />
+                        )}
+                      </div>
+                      {isEditing ? (
                         <Input
+                          autoFocus
                           value={editName}
                           onChange={(e) => setEditName(e.target.value)}
-                          placeholder="Название"
-                          className="h-7 text-xs bg-background rounded-lg border-border"
-                          autoFocus
+                          onKeyDown={(e) => { if (e.key === "Enter") saveEdit(groupKey, item.id); if (e.key === "Escape") setEditingId(null); }}
+                          className="flex-1 h-8 text-sm bg-background rounded-lg border-border"
                         />
-                        <Input
-                          value={editDesc}
-                          onChange={(e) => setEditDesc(e.target.value)}
-                          placeholder="Описание"
-                          className="h-7 text-xs bg-background rounded-lg border-border"
-                          onKeyDown={(e) => { if (e.key === "Enter") saveEdit(group.key, item.id); if (e.key === "Escape") setEditingId(null); }}
-                        />
-                      </div>
-                    ) : (
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-foreground truncate">{displayName}</p>
-                        <p className="text-xs text-muted-foreground truncate">{displayDesc}</p>
-                        <p className="text-[10px] text-muted-foreground/60 mt-0.5">{customImg ? "Изображение: своё" : currentImg ? "Изображение: по умолчанию" : "Нет изображения"}</p>
-                      </div>
-                    )}
-                    <div className="flex flex-col gap-1">
-                      {isEditing ? (
-                        <>
-                          <Button variant="default" size="sm" className="rounded-lg h-7 px-2" onClick={() => saveEdit(group.key, item.id)}>
-                            <Check className="w-3.5 h-3.5" />
-                          </Button>
-                          <Button variant="ghost" size="sm" className="rounded-lg h-7 px-2" onClick={() => setEditingId(null)}>
-                            <X className="w-3.5 h-3.5" />
-                          </Button>
-                        </>
                       ) : (
-                        <>
-                          <Button variant="outline" size="sm" className="rounded-lg h-7 px-2" onClick={() => startEdit(group.key, item)}>
-                            <Pencil className="w-3.5 h-3.5" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="rounded-lg h-7 px-2"
-                            onClick={() => {
-                              setUploadTarget({ group: group.key, id: item.id });
-                              fileRef.current?.click();
-                            }}
-                          >
-                            <Upload className="w-3.5 h-3.5" />
-                          </Button>
-                          {(customImg || customName) && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="rounded-lg h-7 px-2 text-destructive"
-                              onClick={() => { resetImage(group.key, item.id); resetName(group.key, item.id); }}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </Button>
-                          )}
-                        </>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-semibold truncate ${isHidden ? "line-through text-muted-foreground" : "text-foreground"}`}>{displayName}</p>
+                          <p className="text-[10px] text-muted-foreground/60">{isHidden ? "скрыто" : customImg ? "своё фото" : currentImg ? "фото по умолчанию" : "нет фото"}</p>
+                        </div>
                       )}
+                      <div className="flex gap-1">
+                        {isEditing ? (
+                          <>
+                            <Button variant="default" size="sm" className="rounded-lg h-7 px-2" onClick={() => saveEdit(groupKey, item.id)}><Check className="w-3 h-3" /></Button>
+                            <Button variant="ghost" size="sm" className="rounded-lg h-7 px-2" onClick={() => setEditingId(null)}><X className="w-3 h-3" /></Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button variant="outline" size="sm" className="rounded-lg h-7 px-2" onClick={() => { setEditingId(`${groupKey}_${item.id}`); setEditName(displayName); }}>
+                              <Pencil className="w-3 h-3" />
+                            </Button>
+                            {!isHidden && (
+                              <Button variant="outline" size="sm" className="rounded-lg h-7 px-2" onClick={() => { setUploadTarget({ group: groupKey, id: item.id }); fileRef.current?.click(); }}>
+                                <Upload className="w-3 h-3" />
+                              </Button>
+                            )}
+                            <Button
+                              variant={isHidden ? "outline" : "ghost"}
+                              size="sm"
+                              className={`rounded-lg h-7 px-2 ${isHidden ? "text-primary" : "text-destructive"}`}
+                              onClick={() => isHidden ? showModel(groupKey, item.id) : hideModel(groupKey, item.id)}
+                            >
+                              {isHidden ? <Plus className="w-3 h-3" /> : <Trash2 className="w-3 h-3" />}
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+
+              {/* Custom models */}
+              {customItems.map((item: { id: string; name: string; description: string }) => {
+                const customImg = images[groupKey]?.[item.id];
+                const customName = customNames[groupKey]?.[item.id];
+                const displayName = customName?.name ?? item.name;
+                const isEditing = editingId === `${groupKey}_${item.id}`;
+
+                return (
+                  <div key={item.id} className="bg-primary/5 border border-primary/15 rounded-xl p-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-lg bg-card border border-border flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {customImg ? (
+                          <img src={customImg} alt={displayName} className="w-full h-full object-cover" />
+                        ) : (
+                          <Image className="w-5 h-5 text-muted-foreground" />
+                        )}
+                      </div>
+                      {isEditing ? (
+                        <Input
+                          autoFocus
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") saveEdit(groupKey, item.id); if (e.key === "Escape") setEditingId(null); }}
+                          className="flex-1 h-8 text-sm bg-background rounded-lg border-border"
+                        />
+                      ) : (
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-foreground truncate">{displayName}</p>
+                          <p className="text-[10px] text-primary/60">пользовательская</p>
+                        </div>
+                      )}
+                      <div className="flex gap-1">
+                        {isEditing ? (
+                          <>
+                            <Button variant="default" size="sm" className="rounded-lg h-7 px-2" onClick={() => saveEdit(groupKey, item.id)}><Check className="w-3 h-3" /></Button>
+                            <Button variant="ghost" size="sm" className="rounded-lg h-7 px-2" onClick={() => setEditingId(null)}><X className="w-3 h-3" /></Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button variant="outline" size="sm" className="rounded-lg h-7 px-2" onClick={() => { setEditingId(`${groupKey}_${item.id}`); setEditName(displayName); }}>
+                              <Pencil className="w-3 h-3" />
+                            </Button>
+                            <Button variant="outline" size="sm" className="rounded-lg h-7 px-2" onClick={() => { setUploadTarget({ group: groupKey, id: item.id }); fileRef.current?.click(); }}>
+                              <Upload className="w-3 h-3" />
+                            </Button>
+                            <Button variant="ghost" size="sm" className="rounded-lg h-7 px-2 text-destructive" onClick={() => removeCustomModel(groupKey, item.id)}>
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </section>
   );
 };
+
+
+
+
+
+
 
 
 
