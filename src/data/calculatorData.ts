@@ -170,8 +170,11 @@ export function saveFormulaStrings(f: FormulaStrings) {
 
 function evalFormula(expr: string, vars: Record<string, number>): number {
   try {
-    const keys = Object.keys(vars);
-    const vals = Object.values(vars);
+    // Merge custom variables (user-defined) into the scope
+    const customVars = getCustomVariables();
+    const allVars = { ...Object.fromEntries(customVars.map(v => [v.varName, v.value])), ...vars };
+    const keys = Object.keys(allVars);
+    const vals = Object.values(allVars);
     // eslint-disable-next-line no-new-func
     const fn = new Function(...keys, `"use strict"; return (${expr});`);
     const result = fn(...vals);
@@ -180,6 +183,7 @@ function evalFormula(expr: string, vars: Record<string, number>): number {
     return 0;
   }
 }
+
 
 // === Pricing Formulas ===
 // X, Y in mm; H in mm; metalPrice = price per unit from matrix
@@ -230,5 +234,25 @@ export function calcAddonPrice(
 }
 
 
+// === Custom Formula Variables ===
+export interface CustomVariable {
+  id: string;
+  name: string;       // display label
+  varName: string;    // JS identifier for use in formulas
+  value: number;
+}
+
+export function getCustomVariables(): CustomVariable[] {
+  try {
+    const saved = localStorage.getItem("pipe_custom_variables");
+    return saved ? JSON.parse(saved) : [];
+  } catch { return []; }
+}
+
+export function saveCustomVariables(vars: CustomVariable[]) {
+  localStorage.setItem("pipe_custom_variables", JSON.stringify(vars));
+}
+
 export const formatPrice = (n: number) =>
   new Intl.NumberFormat("ru-RU").format(Math.round(n)) + " ₽";
+

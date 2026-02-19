@@ -2,15 +2,16 @@ import { useCalculator } from "@/context/CalculatorContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { ArrowRight, Plus, Trash2, Grid3x3, Building2, Upload, Image, ImagePlus, Lock, Package, BookOpen, ChevronDown, Pencil, Check, X } from "lucide-react";
+import { ArrowRight, Plus, Trash2, Grid3x3, Building2, Upload, Image, ImagePlus, Lock, Package, BookOpen, ChevronDown, Pencil, Check, X, Variable } from "lucide-react";
 import { useState, useRef } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { NumericInput } from "@/components/calculator/DimensionsForm";
 import { toast } from "@/hooks/use-toast";
-import { capModels, boxModels, flashingModels } from "@/data/calculatorData";
+import { capModels, boxModels, flashingModels, getCustomVariables, saveCustomVariables, CustomVariable } from "@/data/calculatorData";
 import { defaultCapImages, defaultBoxImages, defaultFlashingImages, getAllModels, getHiddenModels, saveHiddenModels } from "@/components/calculator/ProductSelection";
 import { getPassword, setPassword } from "@/components/PasswordGate";
 import { FormulaEditor } from "@/components/calculator/FormulaEditor";
+
 
 interface ProductImageConfig {
   cap: Record<string, string>;
@@ -787,7 +788,159 @@ const DocumentationSection = () => {
   );
 };
 
+// === Material Prices Section with custom variables ===
+interface MaterialPricesSectionProps {
+  metalPrice: number; setMetalPrice: (v: number) => void;
+  meshPrice: number; setMeshPrice: (v: number) => void;
+  stainlessPrice: number; setStainlessPrice: (v: number) => void;
+  zincPrice065: number; setZincPrice065: (v: number) => void;
+}
+
+const MaterialPricesSection = ({
+  metalPrice, setMetalPrice,
+  meshPrice, setMeshPrice,
+  stainlessPrice, setStainlessPrice,
+  zincPrice065, setZincPrice065,
+}: MaterialPricesSectionProps) => {
+  const [customVars, setCustomVars] = useState<CustomVariable[]>(getCustomVariables);
+  const [newLabel, setNewLabel] = useState("");
+  const [newVarName, setNewVarName] = useState("");
+  const [newValue, setNewValue] = useState("");
+
+  const toVarName = (label: string) =>
+    label.trim().toLowerCase()
+      .replace(/[^a-zа-яё0-9_\s]/gi, "")
+      .replace(/\s+/g, "_")
+      .replace(/[^a-z0-9_]/gi, "")
+      || `var_${Date.now()}`;
+
+  const addVar = () => {
+    const label = newLabel.trim();
+    if (!label) return;
+    const varName = newVarName.trim() || toVarName(label);
+    const val = parseFloat(newValue) || 0;
+    if (!/^[a-z_][a-z0-9_]*$/i.test(varName)) {
+      toast({ title: "Имя переменной должно содержать только латинские буквы, цифры и _", variant: "destructive" });
+      return;
+    }
+    if (customVars.some(v => v.varName === varName)) {
+      toast({ title: `Переменная "${varName}" уже существует`, variant: "destructive" });
+      return;
+    }
+    const updated = [...customVars, { id: `cvar_${Date.now()}`, name: label, varName, value: val }];
+    setCustomVars(updated);
+    saveCustomVariables(updated);
+    setNewLabel(""); setNewVarName(""); setNewValue("");
+    toast({ title: `Переменная "${varName}" добавлена` });
+  };
+
+  const updateVarValue = (id: string, value: number) => {
+    const updated = customVars.map(v => v.id === id ? { ...v, value } : v);
+    setCustomVars(updated);
+    saveCustomVariables(updated);
+  };
+
+  const removeVar = (id: string) => {
+    const updated = customVars.filter(v => v.id !== id);
+    setCustomVars(updated);
+    saveCustomVariables(updated);
+  };
+
+  const builtIn = [
+    { label: "Цена металла", varHint: "metalPrice", value: metalPrice, set: setMetalPrice },
+    { label: "Цена сетки", varHint: "meshPrice", value: meshPrice, set: setMeshPrice },
+    { label: "Цена нержавейки", varHint: "stainlessPrice", value: stainlessPrice, set: setStainlessPrice },
+    { label: "Цена цинка 0,65", varHint: "zincPrice065", value: zincPrice065, set: setZincPrice065 },
+  ];
+
+  return (
+    <section className="card-soft p-8">
+      <div className="flex items-center gap-2 mb-1">
+        <Variable className="w-5 h-5 text-primary" />
+        <h2 className="text-lg font-bold text-foreground">Базовые цены материалов (руб)</h2>
+      </div>
+      <p className="text-sm text-muted-foreground mb-5">
+        Переменные доступны в формулах расчёта по их имени. Добавляйте свои переменные для использования в кастомных формулах.
+      </p>
+
+      {/* Built-in variables */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        {builtIn.map(f => (
+          <div key={f.label}>
+            <label className="text-sm font-semibold text-foreground">{f.label}</label>
+            <div className="text-[10px] text-muted-foreground font-mono mt-0.5 mb-1">{f.varHint}</div>
+            <NumericInput value={f.value} onChange={f.set} unit="₽"
+              className="bg-muted border-0 rounded-xl pr-8" />
+          </div>
+        ))}
+      </div>
+
+      {/* Custom variables */}
+      {customVars.length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+          {customVars.map(v => (
+            <div key={v.id} className="relative">
+              <label className="text-sm font-semibold text-foreground">{v.name}</label>
+              <div className="text-[10px] text-primary font-mono mt-0.5 mb-1">{v.varName}</div>
+              <div className="flex items-center gap-1">
+                <NumericInput value={v.value} onChange={(val) => updateVarValue(v.id, val)} unit="₽"
+                  className="bg-muted border-0 rounded-xl pr-8 flex-1" />
+                <button onClick={() => removeVar(v.id)} className="text-muted-foreground hover:text-destructive transition-colors ml-1">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add new variable */}
+      <div className="border-t border-dashed border-border pt-4">
+        <p className="text-xs font-semibold text-muted-foreground mb-3">Добавить переменную</p>
+        <div className="flex flex-wrap gap-2 items-end">
+          <div>
+            <label className="text-xs text-muted-foreground">Название</label>
+            <Input
+              placeholder="Цена профиля"
+              value={newLabel}
+              onChange={(e) => {
+                setNewLabel(e.target.value);
+                if (!newVarName) setNewVarName(toVarName(e.target.value));
+              }}
+              className="mt-0.5 bg-muted border-0 rounded-xl text-sm w-40"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">Имя переменной (латиница)</label>
+            <Input
+              placeholder="profilePrice"
+              value={newVarName}
+              onChange={(e) => setNewVarName(e.target.value)}
+              className="mt-0.5 bg-muted border-0 rounded-xl text-sm font-mono w-40"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">Значение (₽)</label>
+            <Input
+              type="number"
+              placeholder="500"
+              value={newValue}
+              onChange={(e) => setNewValue(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") addVar(); }}
+              className="mt-0.5 bg-muted border-0 rounded-xl text-sm w-28"
+            />
+          </div>
+          <Button onClick={addVar} size="sm" className="rounded-xl gap-1.5">
+            <Plus className="w-3.5 h-3.5" /> Добавить
+          </Button>
+        </div>
+      </div>
+    </section>
+  );
+};
+
 const SettingsPage = () => {
+
   const {
     coatings, setCoatings,
     colors, setColors,
@@ -925,23 +1078,14 @@ const SettingsPage = () => {
         <FormulaEditor />
 
 
-        <section className="card-soft p-8">
-          <h2 className="text-lg font-bold text-foreground mb-4">Базовые цены материалов (руб)</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              { label: "Цена металла", value: metalPrice, set: setMetalPrice },
-              { label: "Цена сетки", value: meshPrice, set: setMeshPrice },
-              { label: "Цена нержавейки", value: stainlessPrice, set: setStainlessPrice },
-              { label: "Цена цинка 0,65", value: zincPrice065, set: setZincPrice065 },
-            ].map(f => (
-              <div key={f.label}>
-                <label className="text-sm font-semibold text-foreground">{f.label}</label>
-                <NumericInput value={f.value} onChange={f.set} unit="₽"
-                  className="mt-1 bg-muted border-0 rounded-xl pr-8" />
-              </div>
-            ))}
-          </div>
-        </section>
+        {/* Material base prices + custom variables */}
+        <MaterialPricesSection
+          metalPrice={metalPrice} setMetalPrice={setMetalPrice}
+          meshPrice={meshPrice} setMeshPrice={setMeshPrice}
+          stainlessPrice={stainlessPrice} setStainlessPrice={setStainlessPrice}
+          zincPrice065={zincPrice065} setZincPrice065={setZincPrice065}
+        />
+
 
         {/* Price Matrix — unified with coating/color management */}
         <section className="card-soft p-8">
