@@ -65,14 +65,28 @@ function getCustomNames(): Record<string, Record<string, { name: string; descrip
   } catch { return {}; }
 }
 
+export function getHiddenModels(): { cap: string[]; box: string[]; flashing: string[] } {
+  try {
+    const saved = localStorage.getItem("pipe_hidden_models");
+    return saved ? JSON.parse(saved) : { cap: [], box: [], flashing: [] };
+  } catch { return { cap: [], box: [], flashing: [] }; }
+}
+
+export function saveHiddenModels(hidden: { cap: string[]; box: string[]; flashing: string[] }) {
+  localStorage.setItem("pipe_hidden_models", JSON.stringify(hidden));
+}
+
 export function getAllModels(type: "cap" | "box" | "flashing") {
   const custom = getCustomModels();
   const customNames = getCustomNames();
+  const hidden = getHiddenModels();
   const applyNames = (items: { id: string; name: string; description: string }[]) =>
-    items.map(item => {
-      const override = customNames[type]?.[item.id];
-      return override ? { ...item, name: override.name, description: override.description } : item;
-    });
+    items
+      .filter(item => !hidden[type].includes(item.id))
+      .map(item => {
+        const override = customNames[type]?.[item.id];
+        return override ? { ...item, name: override.name, description: override.description } : item;
+      });
 
   if (type === "cap") return applyNames([...capModels, ...custom.cap]);
   if (type === "box") return applyNames([...boxModels, ...custom.box]);
@@ -141,7 +155,6 @@ function SelectionGroup<T extends string>({ title, icon, items, value, onChange,
                 <p className={`text-xs font-bold leading-tight ${selected ? "text-primary" : "text-foreground"}`}>
                   {item.name}
                 </p>
-                <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{item.description}</p>
               </div>
 
               {/* Check badge */}
