@@ -10,6 +10,7 @@ import { toast } from "@/hooks/use-toast";
 import { capModels, boxModels, flashingModels } from "@/data/calculatorData";
 import { defaultCapImages, defaultBoxImages, defaultFlashingImages, getAllModels } from "@/components/calculator/ProductSelection";
 import { getPassword, setPassword } from "@/components/PasswordGate";
+import { FormulaEditor } from "@/components/calculator/FormulaEditor";
 
 interface ProductImageConfig {
   cap: Record<string, string>;
@@ -798,7 +799,10 @@ const SettingsPage = () => {
         {/* Product Images */}
         <ProductImageManager />
 
-        {/* Material Prices */}
+        {/* Formula Editor */}
+        <FormulaEditor />
+
+
         <section className="card-soft p-8">
           <h2 className="text-lg font-bold text-foreground mb-4">Базовые цены материалов (руб)</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

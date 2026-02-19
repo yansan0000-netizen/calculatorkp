@@ -78,41 +78,106 @@ export const specialMaterials = ["сетка", "нержавейка", "цинк
 // === Default metal price (user can edit in settings) ===
 export const DEFAULT_METAL_PRICE = 510;
 
+// === Formula Coefficients ===
+export interface FormulaCoefficients {
+  cap_classic_simple:  { c1: number; c2: number; c3: number; c4: number };
+  cap_classic_slatted: { c1: number; c2: number; c3: number; c4: number };
+  cap_modern_simple:   { c1: number; c2: number; c3: number; c4: number };
+  cap_modern_slatted:  { c1: number; c2: number; c3: number; c4: number };
+  box_smooth:          { c1: number; c2: number };
+  box_lamellar:        { c1: number; c2: number; c3: number; c4: number };
+  flashing_flat:       { c1: number; c2: number; c3: number; c4: number };
+  flashing_profiled:   { c1: number; c2: number; c3: number; c4: number; c5: number };
+  addon_mesh:          { c1: number; c2: number };
+  addon_heatproof:     { c1: number; c2: number };
+  addon_bottom_cap:    { c1: number; c2: number };
+  addon_mount_frame:   { c1: number; c2: number };
+  addon_mount_skeleton:{ c1: number; c2: number; c3: number };
+}
+
+export const defaultCoefficients: FormulaCoefficients = {
+  cap_classic_simple:  { c1: 0.001,  c2: 1500, c3: 0.25,  c4: 0.00075 },
+  cap_classic_slatted: { c1: 0.0015, c2: 1500, c3: 0.625, c4: 0.00075 },
+  cap_modern_simple:   { c1: 0.001,  c2: 1000, c3: 0.25,  c4: 0.00065 },
+  cap_modern_slatted:  { c1: 0.0015, c2: 1500, c3: 0.625, c4: 0.00065 },
+  box_smooth:          { c1: 0.0025, c2: 2500 },
+  box_lamellar:        { c1: 0.0025, c2: 2500, c3: 1.6,   c4: 2.15 },
+  flashing_flat:       { c1: 0.002,  c2: 2000, c3: 0.00125, c4: 0.00085 },
+  flashing_profiled:   { c1: 0.002,  c2: 3000, c3: 0.00125, c4: 0.001,  c5: 500 },
+  addon_mesh:          { c1: 0.0005, c2: 500 },
+  addon_heatproof:     { c1: 0.000001, c2: 500 },
+  addon_bottom_cap:    { c1: 0.000001, c2: 500 },
+  addon_mount_frame:   { c1: 0.0005, c2: 500 },
+  addon_mount_skeleton:{ c1: 0.001, c2: 0.004, c3: 2500 },
+};
+
+export function getStoredCoefficients(): FormulaCoefficients {
+  try {
+    const saved = localStorage.getItem("pipe_formula_coefficients");
+    if (saved) return { ...defaultCoefficients, ...JSON.parse(saved) };
+  } catch {}
+  return defaultCoefficients;
+}
+
+export function saveCoefficients(c: FormulaCoefficients) {
+  localStorage.setItem("pipe_formula_coefficients", JSON.stringify(c));
+}
+
 // === Pricing Formulas ===
 // X, Y in mm; H in mm; metalPrice = price per unit from matrix
+// Formula: ((X*Y*c1 + c2) + (X+Y)*0.002*(c3 + c4*X)*metalPrice) * 2
 
 export function calcCapPrice(model: CapModel, X: number, Y: number, metalPrice: number): number {
+  const co = getStoredCoefficients();
   switch (model) {
-    case "classic_simple":
-      return ((X * Y * 0.001 + 1500) + (X + Y) * 0.002 * (0.25 + 0.00075 * X) * metalPrice) * 2;
-    case "classic_slatted":
-      return ((X * Y * 0.0015 + 1500) + (X + Y) * 0.002 * (0.625 + 0.00075 * X) * metalPrice) * 2;
-    case "modern_simple":
-      return ((X * Y * 0.001 + 1000) + (X + Y) * 0.002 * (0.25 + 0.00065 * X) * metalPrice) * 2;
-    case "modern_slatted":
-      return ((X * Y * 0.0015 + 1500) + (X + Y) * 0.002 * (0.625 + 0.00065 * X) * metalPrice) * 2;
+    case "classic_simple": {
+      const { c1, c2, c3, c4 } = co.cap_classic_simple;
+      return ((X * Y * c1 + c2) + (X + Y) * 0.002 * (c3 + c4 * X) * metalPrice) * 2;
+    }
+    case "classic_slatted": {
+      const { c1, c2, c3, c4 } = co.cap_classic_slatted;
+      return ((X * Y * c1 + c2) + (X + Y) * 0.002 * (c3 + c4 * X) * metalPrice) * 2;
+    }
+    case "modern_simple": {
+      const { c1, c2, c3, c4 } = co.cap_modern_simple;
+      return ((X * Y * c1 + c2) + (X + Y) * 0.002 * (c3 + c4 * X) * metalPrice) * 2;
+    }
+    case "modern_slatted": {
+      const { c1, c2, c3, c4 } = co.cap_modern_slatted;
+      return ((X * Y * c1 + c2) + (X + Y) * 0.002 * (c3 + c4 * X) * metalPrice) * 2;
+    }
     case "custom":
-      return 0; // Individual pricing
+      return 0;
   }
 }
 
 export function calcBoxPrice(model: BoxModel, X: number, Y: number, H: number, metalPrice: number): number {
+  const co = getStoredCoefficients();
   switch (model) {
     case "none": return 0;
-    case "smooth":
-      return ((X * Y * 0.0025 + 2500) + (X + Y) * 0.002 * (H * 0.001) * metalPrice) * 2;
-    case "lamellar":
-      return ((X * Y * 0.0025 + 2500) * 2 + (X + Y) * 0.002 * 1.6 * (H * 0.001) * metalPrice) * 2.15;
+    case "smooth": {
+      const { c1, c2 } = co.box_smooth;
+      return ((X * Y * c1 + c2) + (X + Y) * 0.002 * (H * 0.001) * metalPrice) * 2;
+    }
+    case "lamellar": {
+      const { c1, c2, c3, c4 } = co.box_lamellar;
+      return ((X * Y * c1 + c2) * 2 + (X + Y) * 0.002 * c3 * (H * 0.001) * metalPrice) * c4;
+    }
   }
 }
 
 export function calcFlashingPrice(model: FlashingModel, X: number, Y: number, metalPrice: number): number {
+  const co = getStoredCoefficients();
   switch (model) {
     case "none": return 0;
-    case "flat":
-      return ((X * Y * 0.002 + 2000) + (X * 0.00125 + Y * 0.00085) * metalPrice) * 2;
-    case "profiled":
-      return ((X * Y * 0.002 + 3000) + (X * 0.00125 + Y * 0.001) * metalPrice + (X + 0.5) * 500) * 2;
+    case "flat": {
+      const { c1, c2, c3, c4 } = co.flashing_flat;
+      return ((X * Y * c1 + c2) + (X * c3 + Y * c4) * metalPrice) * 2;
+    }
+    case "profiled": {
+      const { c1, c2, c3, c4, c5 } = co.flashing_profiled;
+      return ((X * Y * c1 + c2) + (X * c3 + Y * c4) * metalPrice + (X + 0.5) * c5) * 2;
+    }
   }
 }
 
@@ -125,21 +190,33 @@ export function calcAddonPrice(
   stainlessPrice: number,
   zincPrice065: number
 ): number {
+  const co = getStoredCoefficients();
   switch (addonId) {
-    case "mesh":
-      return ((X + Y) * 0.0005 * meshPrice * 1.2 + 500) * 2;
-    case "heatproof":
-      return (X * Y * 0.000001 * 1.2 * stainlessPrice + 500) * 2;
-    case "bottom_cap":
-      return (X * Y * 0.000001 * 1.2 * metalPrice + 500) * 2;
+    case "mesh": {
+      const { c1, c2 } = co.addon_mesh;
+      return ((X + Y) * c1 * meshPrice * 1.2 + c2) * 2;
+    }
+    case "heatproof": {
+      const { c1, c2 } = co.addon_heatproof;
+      return (X * Y * c1 * 1.2 * stainlessPrice + c2) * 2;
+    }
+    case "bottom_cap": {
+      const { c1, c2 } = co.addon_bottom_cap;
+      return (X * Y * c1 * 1.2 * metalPrice + c2) * 2;
+    }
     case "gas_passthrough":
       return capModel.startsWith("classic") ? 2500 : 1800;
-    case "mount_frame":
-      return ((X + Y) * 0.0005 * zincPrice065 * 1.2 + 500) * 2;
-    case "mount_skeleton":
-      return (((X + Y) * 0.001 + (H * 0.001) * 0.004) * zincPrice065 * 1.2 + 2500) * 2;
+    case "mount_frame": {
+      const { c1, c2 } = co.addon_mount_frame;
+      return ((X + Y) * c1 * zincPrice065 * 1.2 + c2) * 2;
+    }
+    case "mount_skeleton": {
+      const { c1, c2, c3 } = co.addon_mount_skeleton;
+      return (((X + Y) * c1 + (H * 0.001) * c2) * zincPrice065 * 1.2 + c3) * 2;
+    }
   }
 }
+
 
 export const formatPrice = (n: number) =>
   new Intl.NumberFormat("ru-RU").format(Math.round(n)) + " ₽";
