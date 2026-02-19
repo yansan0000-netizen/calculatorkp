@@ -1,11 +1,16 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   defaultCoefficients,
   getStoredCoefficients,
   saveCoefficients,
   FormulaCoefficients,
+  defaultFormulaStrings,
+  getStoredFormulaStrings,
+  saveFormulaStrings,
+  FormulaStrings,
 } from "@/data/calculatorData";
 import { FunctionSquare, RotateCcw, Save } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
@@ -20,9 +25,10 @@ interface FieldDef {
 
 interface ModelDef {
   id: CoeffKey;
+  formulaKey: keyof FormulaStrings;
   title: string;
-  formula: string;
   fields: FieldDef[];
+  formulaVars: string; // hint for available variables
 }
 
 const CAP_FIELDS: FieldDef[] = [
@@ -35,63 +41,70 @@ const CAP_FIELDS: FieldDef[] = [
 const models: ModelDef[] = [
   {
     id: "cap_classic_simple",
+    formulaKey: "cap_classic_simple",
     title: "Колпак: Классика простой",
-    formula: "((X×Y×c1 + c2) + (X+Y)×0.002×(c3 + c4×X)×цена) × 2",
     fields: CAP_FIELDS,
+    formulaVars: "X, Y, metalPrice, c1, c2, c3, c4",
   },
   {
     id: "cap_classic_slatted",
+    formulaKey: "cap_classic_slatted",
     title: "Колпак: Классика реечный",
-    formula: "((X×Y×c1 + c2) + (X+Y)×0.002×(c3 + c4×X)×цена) × 2",
     fields: CAP_FIELDS,
+    formulaVars: "X, Y, metalPrice, c1, c2, c3, c4",
   },
   {
     id: "cap_modern_simple",
+    formulaKey: "cap_modern_simple",
     title: "Колпак: Модерн простой",
-    formula: "((X×Y×c1 + c2) + (X+Y)×0.002×(c3 + c4×X)×цена) × 2",
     fields: CAP_FIELDS,
+    formulaVars: "X, Y, metalPrice, c1, c2, c3, c4",
   },
   {
     id: "cap_modern_slatted",
+    formulaKey: "cap_modern_slatted",
     title: "Колпак: Модерн реечный",
-    formula: "((X×Y×c1 + c2) + (X+Y)×0.002×(c3 + c4×X)×цена) × 2",
     fields: CAP_FIELDS,
+    formulaVars: "X, Y, metalPrice, c1, c2, c3, c4",
   },
   {
     id: "box_smooth",
+    formulaKey: "box_smooth",
     title: "Короб: Простой гладкий",
-    formula: "((X×Y×c1 + c2) + (X+Y)×0.002×(H×0.001)×цена) × 2",
     fields: [
       { key: "c1", label: "c1 — доля площади", hint: "Умножается на X×Y" },
       { key: "c2", label: "c2 — фиксированная стоимость", hint: "₽" },
     ],
+    formulaVars: "X, Y, H, metalPrice, c1, c2",
   },
   {
     id: "box_lamellar",
+    formulaKey: "box_lamellar",
     title: "Короб: Ламельный",
-    formula: "((X×Y×c1 + c2)×2 + (X+Y)×0.002×c3×(H×0.001)×цена) × c4",
     fields: [
       { key: "c1", label: "c1 — доля площади", hint: "Умножается на X×Y" },
       { key: "c2", label: "c2 — фиксированная стоимость", hint: "₽" },
       { key: "c3", label: "c3 — высотный коэф.", hint: "Множитель высоты" },
       { key: "c4", label: "c4 — итоговый множитель", hint: "На что умножается всё выражение" },
     ],
+    formulaVars: "X, Y, H, metalPrice, c1, c2, c3, c4",
   },
   {
     id: "flashing_flat",
+    formulaKey: "flashing_flat",
     title: "Оклад: Для плоских покрытий",
-    formula: "((X×Y×c1 + c2) + (X×c3 + Y×c4)×цена) × 2",
     fields: [
       { key: "c1", label: "c1 — доля площади", hint: "Умножается на X×Y" },
       { key: "c2", label: "c2 — фиксированная стоимость", hint: "₽" },
       { key: "c3", label: "c3 — коэф. X по металлу", hint: "" },
       { key: "c4", label: "c4 — коэф. Y по металлу", hint: "" },
     ],
+    formulaVars: "X, Y, metalPrice, c1, c2, c3, c4",
   },
   {
     id: "flashing_profiled",
+    formulaKey: "flashing_profiled",
     title: "Оклад: Для профилированных покрытий",
-    formula: "((X×Y×c1 + c2) + (X×c3 + Y×c4)×цена + (X+0.5)×c5) × 2",
     fields: [
       { key: "c1", label: "c1 — доля площади", hint: "" },
       { key: "c2", label: "c2 — фиксированная стоимость", hint: "₽" },
@@ -99,57 +112,64 @@ const models: ModelDef[] = [
       { key: "c4", label: "c4 — коэф. Y по металлу", hint: "" },
       { key: "c5", label: "c5 — стоимость кромки", hint: "₽ за единицу (X+0.5)" },
     ],
+    formulaVars: "X, Y, metalPrice, c1, c2, c3, c4, c5",
   },
   {
     id: "addon_mesh",
+    formulaKey: "addon_mesh",
     title: "Доп. опция: Сетка от птиц",
-    formula: "((X+Y)×c1×цена_сетки×1.2 + c2) × 2",
     fields: [
       { key: "c1", label: "c1 — периметрный коэф.", hint: "" },
       { key: "c2", label: "c2 — фиксированная стоимость", hint: "₽" },
     ],
+    formulaVars: "X, Y, meshPrice, c1, c2",
   },
   {
     id: "addon_heatproof",
+    formulaKey: "addon_heatproof",
     title: "Доп. опция: Жаростойкая вставка",
-    formula: "(X×Y×c1×1.2×цена_нерж. + c2) × 2",
     fields: [
       { key: "c1", label: "c1 — доля площади", hint: "" },
       { key: "c2", label: "c2 — фиксированная стоимость", hint: "₽" },
     ],
+    formulaVars: "X, Y, stainlessPrice, c1, c2",
   },
   {
     id: "addon_bottom_cap",
+    formulaKey: "addon_bottom_cap",
     title: "Доп. опция: Нижняя крышка",
-    formula: "(X×Y×c1×1.2×цена_металла + c2) × 2",
     fields: [
       { key: "c1", label: "c1 — доля площади", hint: "" },
       { key: "c2", label: "c2 — фиксированная стоимость", hint: "₽" },
     ],
+    formulaVars: "X, Y, metalPrice, c1, c2",
   },
   {
     id: "addon_mount_frame",
+    formulaKey: "addon_mount_frame",
     title: "Доп. опция: Установочная рамка",
-    formula: "((X+Y)×c1×цена_цинка×1.2 + c2) × 2",
     fields: [
       { key: "c1", label: "c1 — периметрный коэф.", hint: "" },
       { key: "c2", label: "c2 — фиксированная стоимость", hint: "₽" },
     ],
+    formulaVars: "X, Y, zincPrice065, c1, c2",
   },
   {
     id: "addon_mount_skeleton",
+    formulaKey: "addon_mount_skeleton",
     title: "Доп. опция: Установочный каркас",
-    formula: "((X+Y)×c1 + H×0.001×c2)×цена_цинка×1.2 + c3) × 2",
     fields: [
       { key: "c1", label: "c1 — периметрный коэф.", hint: "" },
       { key: "c2", label: "c2 — высотный коэф.", hint: "" },
       { key: "c3", label: "c3 — фиксированная стоимость", hint: "₽" },
     ],
+    formulaVars: "X, Y, H, zincPrice065, c1, c2, c3",
   },
 ];
 
 export const FormulaEditor = () => {
   const [coeffs, setCoeffs] = useState<FormulaCoefficients>(getStoredCoefficients);
+  const [formulas, setFormulas] = useState<FormulaStrings>(getStoredFormulaStrings);
   const [openId, setOpenId] = useState<CoeffKey | null>(null);
 
   const handleChange = (modelId: CoeffKey, field: string, raw: string) => {
@@ -161,13 +181,19 @@ export const FormulaEditor = () => {
     }));
   };
 
+  const handleFormulaChange = (key: keyof FormulaStrings, value: string) => {
+    setFormulas(prev => ({ ...prev, [key]: value }));
+  };
+
   const handleSave = () => {
     saveCoefficients(coeffs);
+    saveFormulaStrings(formulas);
     toast({ title: "Формулы сохранены" });
   };
 
-  const handleReset = (modelId: CoeffKey) => {
+  const handleReset = (modelId: CoeffKey, formulaKey: keyof FormulaStrings) => {
     setCoeffs(prev => ({ ...prev, [modelId]: defaultCoefficients[modelId] }));
+    setFormulas(prev => ({ ...prev, [formulaKey]: defaultFormulaStrings[formulaKey] }));
     toast({ title: "Коэффициенты сброшены к значениям по умолчанию" });
   };
 
@@ -183,7 +209,7 @@ export const FormulaEditor = () => {
         </Button>
       </div>
       <p className="text-sm text-muted-foreground mb-5">
-        Настройте коэффициенты формул для каждой модели. Нажмите на модель чтобы развернуть.
+        Настройте коэффициенты и сами формулы для каждой модели. Нажмите на модель чтобы развернуть.
       </p>
 
       <div className="space-y-2">
@@ -191,7 +217,8 @@ export const FormulaEditor = () => {
           const isOpen = openId === m.id;
           const modelCoeffs = coeffs[m.id] as Record<string, number>;
           const defCoeffs = defaultCoefficients[m.id] as Record<string, number>;
-          const hasChanges = m.fields.some(f => modelCoeffs[f.key] !== defCoeffs[f.key]);
+          const formulaChanged = formulas[m.formulaKey] !== defaultFormulaStrings[m.formulaKey];
+          const hasChanges = formulaChanged || m.fields.some(f => modelCoeffs[f.key] !== defCoeffs[f.key]);
 
           return (
             <div key={m.id} className="border border-border rounded-xl overflow-hidden">
@@ -209,10 +236,26 @@ export const FormulaEditor = () => {
               </button>
 
               {isOpen && (
-                <div className="px-4 pb-4 pt-3 space-y-3">
-                  <div className="text-xs font-mono bg-muted/60 text-muted-foreground rounded-lg px-3 py-2 border border-border/50">
-                    {m.formula}
+                <div className="px-4 pb-4 pt-3 space-y-4">
+                  {/* Formula editor */}
+                  <div>
+                    <label className="text-xs font-semibold text-foreground">Формула (JS-выражение)</label>
+                    <div className="text-[10px] text-muted-foreground mt-0.5 mb-1.5">
+                      Доступные переменные: <span className="font-mono text-primary">{m.formulaVars}</span>
+                    </div>
+                    <Textarea
+                      value={formulas[m.formulaKey]}
+                      onChange={(e) => handleFormulaChange(m.formulaKey, e.target.value)}
+                      className="font-mono text-sm bg-muted border border-border/70 rounded-xl resize-none"
+                      rows={2}
+                      spellCheck={false}
+                    />
+                    {formulaChanged && (
+                      <div className="text-[10px] text-primary mt-1">⚠ Формула изменена относительно значения по умолчанию</div>
+                    )}
                   </div>
+
+                  {/* Coefficients */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {m.fields.map(f => (
                       <div key={f.key}>
@@ -228,12 +271,13 @@ export const FormulaEditor = () => {
                       </div>
                     ))}
                   </div>
+
                   <div className="flex justify-end">
                     <Button
                       variant="ghost"
                       size="sm"
                       className="rounded-xl text-muted-foreground gap-1.5"
-                      onClick={() => handleReset(m.id)}
+                      onClick={() => handleReset(m.id, m.formulaKey)}
                     >
                       <RotateCcw className="w-3.5 h-3.5" /> Сбросить
                     </Button>
