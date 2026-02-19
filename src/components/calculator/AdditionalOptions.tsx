@@ -35,19 +35,16 @@ const AdditionalOptions = () => {
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.05 }}
-              className={`flex items-start gap-3 cursor-pointer p-3 rounded-xl transition-all duration-200 ${
+            className={`flex items-center gap-3 cursor-pointer p-3 rounded-xl transition-all duration-200 ${
                 checked ? "bg-primary/5 border border-primary/20" : "bg-muted border border-transparent hover:border-primary/10"
               }`}
             >
               <Checkbox
                 checked={checked}
                 onCheckedChange={() => toggleAddon(opt.id)}
-                className="mt-0.5 data-[state=checked]:bg-primary data-[state=checked]:border-primary rounded-md"
+                className="data-[state=checked]:bg-primary data-[state=checked]:border-primary rounded-md"
               />
-              <div>
-                <span className="text-sm font-semibold text-foreground">{opt.name}</span>
-                <p className="text-xs text-muted-foreground">{opt.description}</p>
-              </div>
+              <span className="text-sm font-semibold text-foreground">{opt.name}</span>
             </motion.label>
           );
         })}
