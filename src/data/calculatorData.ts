@@ -123,62 +123,93 @@ export function saveCoefficients(c: FormulaCoefficients) {
   localStorage.setItem("pipe_formula_coefficients", JSON.stringify(c));
 }
 
+// === Formula Strings (editable) ===
+export interface FormulaStrings {
+  cap_classic_simple: string;
+  cap_classic_slatted: string;
+  cap_modern_simple: string;
+  cap_modern_slatted: string;
+  box_smooth: string;
+  box_lamellar: string;
+  flashing_flat: string;
+  flashing_profiled: string;
+  addon_mesh: string;
+  addon_heatproof: string;
+  addon_bottom_cap: string;
+  addon_mount_frame: string;
+  addon_mount_skeleton: string;
+}
+
+export const defaultFormulaStrings: FormulaStrings = {
+  cap_classic_simple:   "((X * Y * c1 + c2) + (X + Y) * 0.002 * (c3 + c4 * X) * metalPrice) * 2",
+  cap_classic_slatted:  "((X * Y * c1 + c2) + (X + Y) * 0.002 * (c3 + c4 * X) * metalPrice) * 2",
+  cap_modern_simple:    "((X * Y * c1 + c2) + (X + Y) * 0.002 * (c3 + c4 * X) * metalPrice) * 2",
+  cap_modern_slatted:   "((X * Y * c1 + c2) + (X + Y) * 0.002 * (c3 + c4 * X) * metalPrice) * 2",
+  box_smooth:           "((X * Y * c1 + c2) + (X + Y) * 0.002 * (H * 0.001) * metalPrice) * 2",
+  box_lamellar:         "((X * Y * c1 + c2) * 2 + (X + Y) * 0.002 * c3 * (H * 0.001) * metalPrice) * c4",
+  flashing_flat:        "((X * Y * c1 + c2) + (X * c3 + Y * c4) * metalPrice) * 2",
+  flashing_profiled:    "((X * Y * c1 + c2) + (X * c3 + Y * c4) * metalPrice + (X + 0.5) * c5) * 2",
+  addon_mesh:           "((X + Y) * c1 * meshPrice * 1.2 + c2) * 2",
+  addon_heatproof:      "(X * Y * c1 * 1.2 * stainlessPrice + c2) * 2",
+  addon_bottom_cap:     "(X * Y * c1 * 1.2 * metalPrice + c2) * 2",
+  addon_mount_frame:    "((X + Y) * c1 * zincPrice065 * 1.2 + c2) * 2",
+  addon_mount_skeleton: "(((X + Y) * c1 + H * 0.001 * c2) * zincPrice065 * 1.2 + c3) * 2",
+};
+
+export function getStoredFormulaStrings(): FormulaStrings {
+  try {
+    const saved = localStorage.getItem("pipe_formula_strings");
+    if (saved) return { ...defaultFormulaStrings, ...JSON.parse(saved) };
+  } catch {}
+  return defaultFormulaStrings;
+}
+
+export function saveFormulaStrings(f: FormulaStrings) {
+  localStorage.setItem("pipe_formula_strings", JSON.stringify(f));
+}
+
+function evalFormula(expr: string, vars: Record<string, number>): number {
+  try {
+    const keys = Object.keys(vars);
+    const vals = Object.values(vars);
+    // eslint-disable-next-line no-new-func
+    const fn = new Function(...keys, `"use strict"; return (${expr});`);
+    const result = fn(...vals);
+    return typeof result === "number" && isFinite(result) ? result : 0;
+  } catch {
+    return 0;
+  }
+}
+
 // === Pricing Formulas ===
 // X, Y in mm; H in mm; metalPrice = price per unit from matrix
-// Formula: ((X*Y*c1 + c2) + (X+Y)*0.002*(c3 + c4*X)*metalPrice) * 2
+// Formulas are stored as JS expressions in localStorage and evaluated dynamically.
 
 export function calcCapPrice(model: CapModel, X: number, Y: number, metalPrice: number): number {
+  if (model === "custom") return 0;
   const co = getStoredCoefficients();
-  switch (model) {
-    case "classic_simple": {
-      const { c1, c2, c3, c4 } = co.cap_classic_simple;
-      return ((X * Y * c1 + c2) + (X + Y) * 0.002 * (c3 + c4 * X) * metalPrice) * 2;
-    }
-    case "classic_slatted": {
-      const { c1, c2, c3, c4 } = co.cap_classic_slatted;
-      return ((X * Y * c1 + c2) + (X + Y) * 0.002 * (c3 + c4 * X) * metalPrice) * 2;
-    }
-    case "modern_simple": {
-      const { c1, c2, c3, c4 } = co.cap_modern_simple;
-      return ((X * Y * c1 + c2) + (X + Y) * 0.002 * (c3 + c4 * X) * metalPrice) * 2;
-    }
-    case "modern_slatted": {
-      const { c1, c2, c3, c4 } = co.cap_modern_slatted;
-      return ((X * Y * c1 + c2) + (X + Y) * 0.002 * (c3 + c4 * X) * metalPrice) * 2;
-    }
-    case "custom":
-      return 0;
-  }
+  const fs = getStoredFormulaStrings();
+  const key = `cap_${model}` as keyof FormulaStrings;
+  const { c1, c2, c3, c4 } = co[key as keyof FormulaCoefficients] as { c1: number; c2: number; c3: number; c4: number };
+  return evalFormula(fs[key], { X, Y, metalPrice, c1, c2, c3, c4 });
 }
 
 export function calcBoxPrice(model: BoxModel, X: number, Y: number, H: number, metalPrice: number): number {
+  if (model === "none") return 0;
   const co = getStoredCoefficients();
-  switch (model) {
-    case "none": return 0;
-    case "smooth": {
-      const { c1, c2 } = co.box_smooth;
-      return ((X * Y * c1 + c2) + (X + Y) * 0.002 * (H * 0.001) * metalPrice) * 2;
-    }
-    case "lamellar": {
-      const { c1, c2, c3, c4 } = co.box_lamellar;
-      return ((X * Y * c1 + c2) * 2 + (X + Y) * 0.002 * c3 * (H * 0.001) * metalPrice) * c4;
-    }
-  }
+  const fs = getStoredFormulaStrings();
+  const key = `box_${model}` as keyof FormulaStrings;
+  const coeffs = co[key as keyof FormulaCoefficients] as Record<string, number>;
+  return evalFormula(fs[key], { X, Y, H, metalPrice, ...coeffs });
 }
 
 export function calcFlashingPrice(model: FlashingModel, X: number, Y: number, metalPrice: number): number {
+  if (model === "none") return 0;
   const co = getStoredCoefficients();
-  switch (model) {
-    case "none": return 0;
-    case "flat": {
-      const { c1, c2, c3, c4 } = co.flashing_flat;
-      return ((X * Y * c1 + c2) + (X * c3 + Y * c4) * metalPrice) * 2;
-    }
-    case "profiled": {
-      const { c1, c2, c3, c4, c5 } = co.flashing_profiled;
-      return ((X * Y * c1 + c2) + (X * c3 + Y * c4) * metalPrice + (X + 0.5) * c5) * 2;
-    }
-  }
+  const fs = getStoredFormulaStrings();
+  const key = `flashing_${model}` as keyof FormulaStrings;
+  const coeffs = co[key as keyof FormulaCoefficients] as Record<string, number>;
+  return evalFormula(fs[key], { X, Y, metalPrice, ...coeffs });
 }
 
 export function calcAddonPrice(
@@ -190,31 +221,12 @@ export function calcAddonPrice(
   stainlessPrice: number,
   zincPrice065: number
 ): number {
+  if (addonId === "gas_passthrough") return capModel.startsWith("classic") ? 2500 : 1800;
   const co = getStoredCoefficients();
-  switch (addonId) {
-    case "mesh": {
-      const { c1, c2 } = co.addon_mesh;
-      return ((X + Y) * c1 * meshPrice * 1.2 + c2) * 2;
-    }
-    case "heatproof": {
-      const { c1, c2 } = co.addon_heatproof;
-      return (X * Y * c1 * 1.2 * stainlessPrice + c2) * 2;
-    }
-    case "bottom_cap": {
-      const { c1, c2 } = co.addon_bottom_cap;
-      return (X * Y * c1 * 1.2 * metalPrice + c2) * 2;
-    }
-    case "gas_passthrough":
-      return capModel.startsWith("classic") ? 2500 : 1800;
-    case "mount_frame": {
-      const { c1, c2 } = co.addon_mount_frame;
-      return ((X + Y) * c1 * zincPrice065 * 1.2 + c2) * 2;
-    }
-    case "mount_skeleton": {
-      const { c1, c2, c3 } = co.addon_mount_skeleton;
-      return (((X + Y) * c1 + (H * 0.001) * c2) * zincPrice065 * 1.2 + c3) * 2;
-    }
-  }
+  const fs = getStoredFormulaStrings();
+  const key = `addon_${addonId}` as keyof FormulaStrings;
+  const coeffs = co[key as keyof FormulaCoefficients] as Record<string, number>;
+  return evalFormula(fs[key], { X, Y, H, metalPrice, meshPrice, stainlessPrice, zincPrice065, ...coeffs });
 }
 
 
