@@ -6,6 +6,30 @@ import {
   CapModel, BoxModel, FlashingModel, AddonId,
 } from "@/data/calculatorData";
 import type { CompanyDefaults } from "@/context/CalculatorContext";
+import { getProductImages, defaultCapImages, defaultBoxImages, defaultFlashingImages } from "@/components/calculator/ProductSelection";
+
+function getCustomNames(): Record<string, Record<string, { name: string; description: string }>> {
+  try {
+    const saved = localStorage.getItem("pipe_custom_names");
+    return saved ? JSON.parse(saved) : {};
+  } catch { return {}; }
+}
+
+function resolveModelName(type: "cap" | "box" | "flashing", id: string, fallback: string): string {
+  const names = getCustomNames();
+  return names[type]?.[id]?.name ?? fallback;
+}
+
+function resolveProductImage(type: "cap" | "box" | "flashing", id: string): string {
+  const imgs = getProductImages();
+  const defaults: Record<string, Record<string, string>> = {
+    cap: defaultCapImages,
+    box: defaultBoxImages,
+    flashing: defaultFlashingImages,
+  };
+  return imgs[type]?.[id] || defaults[type]?.[id] || "";
+}
+
 
 export interface CompanyInfo {
   companyName: string;
@@ -47,24 +71,27 @@ export async function generateCommercialPdf(data: PdfData) {
     metalPrice, meshPrice, stainlessPrice, zincPrice065,
     capModel, boxModel, flashingModel, selectedAddons } = data;
 
-  interface Row { name: string; price: number; key: string }
+  interface Row { name: string; price: number; key: string; image?: string }
   const rows: Row[] = [];
 
   if (capModel !== "custom") {
     const info = capModels.find(c => c.id === capModel);
-    rows.push({ key: "cap", name: `Колпак: ${info?.name}`, price: calcCapPrice(capModel, X, Y, metalPrice) });
+    const name = resolveModelName("cap", capModel, info?.name ?? "");
+    rows.push({ key: "cap", name: `Колпак: ${name}`, price: calcCapPrice(capModel, X, Y, metalPrice), image: resolveProductImage("cap", capModel) });
   } else {
     rows.push({ key: "cap", name: "Колпак: по эскизу", price: 0 });
   }
 
   if (boxModel !== "none") {
     const info = boxModels.find(b => b.id === boxModel);
-    rows.push({ key: "box", name: `Короб: ${info?.name}`, price: calcBoxPrice(boxModel, X, Y, H, metalPrice) });
+    const name = resolveModelName("box", boxModel, info?.name ?? "");
+    rows.push({ key: "box", name: `Короб: ${name}`, price: calcBoxPrice(boxModel, X, Y, H, metalPrice), image: resolveProductImage("box", boxModel) });
   }
 
   if (flashingModel !== "none") {
     const info = flashingModels.find(f => f.id === flashingModel);
-    rows.push({ key: "flashing", name: `Оклад: ${info?.name}`, price: calcFlashingPrice(flashingModel, X, Y, metalPrice) });
+    const name = resolveModelName("flashing", flashingModel, info?.name ?? "");
+    rows.push({ key: "flashing", name: `Оклад: ${name}`, price: calcFlashingPrice(flashingModel, X, Y, metalPrice), image: resolveProductImage("flashing", flashingModel) });
   }
 
   selectedAddons.forEach(id => {
@@ -181,14 +208,22 @@ export async function generateCommercialPdf(data: PdfData) {
               ${rows.map((r, i) => {
                 const iDisc = itemDiscounts[r.key] || 0;
                 const discPrice = r.price * (1 - iDisc / 100);
+                const imgHtml = r.image ? `<img src="${r.image}" style="width:40px;height:40px;object-fit:contain;border-radius:4px;border:1px solid #EEE;background:#fafafa;flex-shrink:0;" />` : `<div style="width:40px;height:40px;flex-shrink:0;"></div>`;
                 return `
                 <tr style="${i % 2 === 1 ? `background:${accentLight};` : ""}">
                   <td style="padding:10px 12px;border-bottom:1px solid #EEE;color:#888;">${i + 1}</td>
-                  <td style="padding:10px 12px;border-bottom:1px solid #EEE;font-weight:500;">${r.name}</td>
+                  <td style="padding:10px 12px;border-bottom:1px solid #EEE;font-weight:500;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                      ${imgHtml}
+                      <span>${r.name}</span>
+                    </div>
+                  </td>
                   <td style="padding:10px 12px;border-bottom:1px solid #EEE;text-align:right;color:#888;">${iDisc > 0 ? `${iDisc}%` : "—"}</td>
                   <td style="padding:10px 12px;border-bottom:1px solid #EEE;text-align:right;font-weight:600;">${r.price > 0 ? (iDisc > 0 ? `<span style="text-decoration:line-through;color:#aaa;font-size:11px;">${fmt(r.price)}</span><br>${fmt(discPrice)}` : fmt(r.price)) : "—"}</td>
                 </tr>`;
               }).join("")}
+
+
               <tr style="background:${accentLight};">
                 <td colspan="3" style="padding:12px;text-align:right;font-weight:700;font-size:14px;color:${accentDark};border-top:2px solid ${borderColor};">ИТОГО:</td>
                 <td style="padding:12px;text-align:right;font-weight:700;font-size:16px;color:${accentDark};border-top:2px solid ${borderColor};">${fmt(totalAfterItemDiscounts)}</td>
