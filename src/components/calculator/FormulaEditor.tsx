@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,6 +15,7 @@ import {
 } from "@/data/calculatorData";
 import { FunctionSquare, RotateCcw, Save, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+
 
 type CoeffKey = keyof FormulaCoefficients;
 
@@ -291,6 +292,24 @@ const ModelRow = ({
     () => evalFormulaPreview(formula, modelCoeffs, m.testVars),
     [formula, modelCoeffs, m.testVars]
   );
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const insertVar = useCallback((varName: string) => {
+    const el = textareaRef.current;
+    if (!el) { onFormulaChange(formula + varName); return; }
+    const start = el.selectionStart ?? formula.length;
+    const end = el.selectionEnd ?? formula.length;
+    const newFormula = formula.slice(0, start) + varName + formula.slice(end);
+    onFormulaChange(newFormula);
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(start + varName.length, start + varName.length);
+    });
+  }, [formula, onFormulaChange]);
+
+  const customVars = getCustomVariables();
+  const builtInVarNames = m.formulaVars.split(",").map(s => s.trim()).filter(Boolean);
+  const customVarNames = customVars.map(v => v.varName);
 
   return (
     <div className="border border-border rounded-xl overflow-hidden">
@@ -309,31 +328,54 @@ const ModelRow = ({
 
       {isOpen && (
         <div className="px-4 pb-4 pt-3 space-y-4">
-          {/* Formula editor */}
           <div>
-            <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center justify-between mb-2">
               <label className="text-xs font-semibold text-foreground">Формула (JS-выражение)</label>
               {preview.ok ? (
                 <div className="flex items-center gap-1.5 text-xs text-primary">
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Результат: <strong>{fmt(preview.result!)}</strong></span>
+                  <span>Тест (380×380×500): <strong>{fmt(preview.result!)}</strong></span>
                 </div>
               ) : (
                 <div className="flex items-center gap-1.5 text-xs text-destructive">
                   <XCircle className="w-3.5 h-3.5" />
-                  <span className="truncate max-w-[200px]">{preview.error}</span>
+                  <span className="truncate max-w-[220px]">{preview.error}</span>
                 </div>
               )}
             </div>
-            <div className="text-[10px] text-muted-foreground mb-1.5">
-              Доступные переменные: <span className="font-mono text-primary">{m.formulaVars}</span>
-              {getCustomVariables().length > 0 && (
-                <span className="ml-1 font-mono text-primary/70">
-                  + {getCustomVariables().map(v => v.varName).join(", ")}
-                </span>
+
+            {/* Variable chips - click to insert */}
+            <div className="flex flex-wrap gap-1 mb-2 p-2 bg-muted/40 rounded-lg border border-border/40">
+              <span className="text-[10px] text-muted-foreground self-center mr-1 shrink-0">Переменные:</span>
+              {builtInVarNames.map(v => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => insertVar(v)}
+                  title={`Вставить "${v}"`}
+                  className="text-[10px] font-mono bg-background hover:bg-primary/10 text-muted-foreground hover:text-primary border border-border hover:border-primary/40 px-1.5 py-0.5 rounded transition-colors"
+                >
+                  {v}
+                </button>
+              ))}
+              {customVarNames.map(v => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => insertVar(v)}
+                  title={`Пользовательская переменная "${v}" — нажмите чтобы вставить`}
+                  className="text-[10px] font-mono bg-primary/10 hover:bg-primary/20 text-primary border border-primary/25 hover:border-primary/50 px-1.5 py-0.5 rounded transition-colors"
+                >
+                  {v} ✦
+                </button>
+              ))}
+              {customVarNames.length === 0 && (
+                <span className="text-[10px] text-muted-foreground/50 self-center">— добавьте свои переменные в «Базовые цены»</span>
               )}
             </div>
+
             <Textarea
+              ref={textareaRef}
               value={formula}
               onChange={(e) => onFormulaChange(e.target.value)}
               className={`font-mono text-sm rounded-xl resize-none transition-colors ${
@@ -376,3 +418,4 @@ const ModelRow = ({
     </div>
   );
 };
+

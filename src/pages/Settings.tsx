@@ -818,6 +818,8 @@ const MaterialPricesSection = ({
   const [newLabel, setNewLabel] = useState("");
   const [newVarName, setNewVarName] = useState("");
   const [newValue, setNewValue] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<{ name: string; varName: string }>({ name: "", varName: "" });
 
   const toVarName = (label: string) =>
     label.trim().toLowerCase()
@@ -850,6 +852,31 @@ const MaterialPricesSection = ({
     const updated = customVars.map(v => v.id === id ? { ...v, value } : v);
     setCustomVars(updated);
     saveCustomVariables(updated);
+  };
+
+  const startEdit = (v: CustomVariable) => {
+    setEditingId(v.id);
+    setEditDraft({ name: v.name, varName: v.varName });
+  };
+
+  const saveEdit = (id: string) => {
+    const name = editDraft.name.trim();
+    const varName = editDraft.varName.trim();
+    if (!name || !varName) { setEditingId(null); return; }
+    if (!/^[a-z_][a-z0-9_]*$/i.test(varName)) {
+      toast({ title: "Имя переменной: только латиница, цифры и _", variant: "destructive" });
+      return;
+    }
+    const conflict = customVars.find(v => v.varName === varName && v.id !== id);
+    if (conflict) {
+      toast({ title: `Имя "${varName}" уже занято`, variant: "destructive" });
+      return;
+    }
+    const updated = customVars.map(v => v.id === id ? { ...v, name, varName } : v);
+    setCustomVars(updated);
+    saveCustomVariables(updated);
+    setEditingId(null);
+    toast({ title: "Переменная обновлена" });
   };
 
   const removeVar = (id: string) => {
@@ -889,20 +916,71 @@ const MaterialPricesSection = ({
 
       {/* Custom variables */}
       {customVars.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
-          {customVars.map(v => (
-            <div key={v.id} className="relative">
-              <label className="text-sm font-semibold text-foreground">{v.name}</label>
-              <div className="text-[10px] text-primary font-mono mt-0.5 mb-1">{v.varName}</div>
-              <div className="flex items-center gap-1">
-                <NumericInput value={v.value} onChange={(val) => updateVarValue(v.id, val)} unit="₽"
-                  className="bg-muted border-0 rounded-xl pr-8 flex-1" />
-                <button onClick={() => removeVar(v.id)} className="text-muted-foreground hover:text-destructive transition-colors ml-1">
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+        <div className="mb-5 space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground">Пользовательские переменные</p>
+          {customVars.map(v => {
+            const isEditing = editingId === v.id;
+            return (
+              <div key={v.id} className={`rounded-xl border transition-all px-4 py-3 ${isEditing ? "border-primary/40 bg-primary/5" : "border-transparent bg-muted/50"}`}>
+                {isEditing ? (
+                  /* Edit mode */
+                  <div className="space-y-2">
+                    <div className="flex gap-2 flex-wrap">
+                      <div className="flex-1 min-w-[120px]">
+                        <label className="text-[10px] text-muted-foreground">Название</label>
+                        <Input
+                          autoFocus
+                          value={editDraft.name}
+                          onChange={(e) => setEditDraft(d => ({ ...d, name: e.target.value }))}
+                          onKeyDown={(e) => { if (e.key === "Enter") saveEdit(v.id); if (e.key === "Escape") setEditingId(null); }}
+                          className="mt-0.5 h-8 bg-background border border-border rounded-lg text-sm"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-[120px]">
+                        <label className="text-[10px] text-muted-foreground">Имя переменной</label>
+                        <Input
+                          value={editDraft.varName}
+                          onChange={(e) => setEditDraft(d => ({ ...d, varName: e.target.value }))}
+                          onKeyDown={(e) => { if (e.key === "Enter") saveEdit(v.id); if (e.key === "Escape") setEditingId(null); }}
+                          className="mt-0.5 h-8 bg-background border border-border rounded-lg text-sm font-mono"
+                        />
+                      </div>
+                      <div className="flex items-end gap-1">
+                        <button onClick={() => saveEdit(v.id)} className="text-primary hover:text-primary/80 transition-colors p-1.5 rounded-lg hover:bg-primary/10">
+                          <Check className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => setEditingId(null)} className="text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-lg hover:bg-muted">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* View mode */
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-semibold text-foreground">{v.name}</span>
+                      <span className="ml-2 text-[10px] font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded">{v.varName}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <NumericInput
+                        value={v.value}
+                        onChange={(val) => updateVarValue(v.id, val)}
+                        unit="₽"
+                        className="bg-background border border-border/50 rounded-lg w-32"
+                      />
+                      <button onClick={() => startEdit(v)} className="text-muted-foreground hover:text-primary transition-colors p-1.5 rounded-lg hover:bg-primary/10">
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => removeVar(v.id)} className="text-muted-foreground hover:text-destructive transition-colors p-1.5 rounded-lg hover:bg-destructive/10">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -950,6 +1028,7 @@ const MaterialPricesSection = ({
     </section>
   );
 };
+
 
 const SettingsPage = () => {
 
