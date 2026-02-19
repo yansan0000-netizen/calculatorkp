@@ -58,11 +58,25 @@ function getCustomModels(): {
   } catch { return { cap: [], box: [], flashing: [] }; }
 }
 
+function getCustomNames(): Record<string, Record<string, { name: string; description: string }>> {
+  try {
+    const saved = localStorage.getItem("pipe_custom_names");
+    return saved ? JSON.parse(saved) : {};
+  } catch { return {}; }
+}
+
 export function getAllModels(type: "cap" | "box" | "flashing") {
   const custom = getCustomModels();
-  if (type === "cap") return [...capModels, ...custom.cap];
-  if (type === "box") return [...boxModels, ...custom.box];
-  return [...flashingModels, ...custom.flashing];
+  const customNames = getCustomNames();
+  const applyNames = (items: { id: string; name: string; description: string }[]) =>
+    items.map(item => {
+      const override = customNames[type]?.[item.id];
+      return override ? { ...item, name: override.name, description: override.description } : item;
+    });
+
+  if (type === "cap") return applyNames([...capModels, ...custom.cap]);
+  if (type === "box") return applyNames([...boxModels, ...custom.box]);
+  return applyNames([...flashingModels, ...custom.flashing]);
 }
 
 type Section<T extends string> = {

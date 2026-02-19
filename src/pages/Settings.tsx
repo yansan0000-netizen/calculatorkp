@@ -2,7 +2,7 @@ import { useCalculator } from "@/context/CalculatorContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { ArrowRight, Plus, Trash2, Grid3x3, Building2, Upload, Image, ImagePlus, Lock, Package, BookOpen, ChevronDown } from "lucide-react";
+import { ArrowRight, Plus, Trash2, Grid3x3, Building2, Upload, Image, ImagePlus, Lock, Package, BookOpen, ChevronDown, Pencil, Check, X } from "lucide-react";
 import { useState, useRef } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { NumericInput } from "@/components/calculator/DimensionsForm";
@@ -186,9 +186,31 @@ const PasswordManager = () => {
   );
 };
 
+// === Custom Names Manager ===
+interface CustomNames {
+  cap: Record<string, { name: string; description: string }>;
+  box: Record<string, { name: string; description: string }>;
+  flashing: Record<string, { name: string; description: string }>;
+}
+
+function getCustomNames(): CustomNames {
+  try {
+    const saved = localStorage.getItem("pipe_custom_names");
+    return saved ? JSON.parse(saved) : { cap: {}, box: {}, flashing: {} };
+  } catch { return { cap: {}, box: {}, flashing: {} }; }
+}
+
+function saveCustomNames(names: CustomNames) {
+  localStorage.setItem("pipe_custom_names", JSON.stringify(names));
+}
+
 // === Product Image Manager ===
 const ProductImageManager = () => {
   const [images, setImages] = useState<ProductImageConfig>(getStoredImages);
+  const [customNames, setCustomNames] = useState<CustomNames>(getCustomNames);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editDesc, setEditDesc] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploadTarget, setUploadTarget] = useState<{ group: "cap" | "box" | "flashing"; id: string } | null>(null);
 
@@ -227,10 +249,36 @@ const ProductImageManager = () => {
     toast({ title: "Изображение сброшено" });
   };
 
-  const groups: { key: "cap" | "box" | "flashing"; title: string; items: { id: string; name: string }[] }[] = [
-    { key: "cap", title: "Колпаки", items: getAllModels("cap").filter(m => m.id !== "custom") },
-    { key: "box", title: "Короба", items: getAllModels("box").filter(m => m.id !== "none") },
-    { key: "flashing", title: "Оклады", items: getAllModels("flashing").filter(m => m.id !== "none") },
+  const startEdit = (group: "cap" | "box" | "flashing", item: { id: string; name: string; description?: string }) => {
+    const saved = customNames[group]?.[item.id];
+    setEditingId(`${group}_${item.id}`);
+    setEditName(saved?.name ?? item.name);
+    setEditDesc(saved?.description ?? (item as any).description ?? "");
+  };
+
+  const saveEdit = (group: "cap" | "box" | "flashing", id: string) => {
+    const updated = {
+      ...customNames,
+      [group]: { ...customNames[group], [id]: { name: editName.trim(), description: editDesc.trim() } },
+    };
+    setCustomNames(updated);
+    saveCustomNames(updated);
+    setEditingId(null);
+    toast({ title: "Название обновлено" });
+  };
+
+  const resetName = (group: "cap" | "box" | "flashing", id: string) => {
+    const updated = { ...customNames, [group]: { ...customNames[group] } };
+    delete updated[group][id];
+    setCustomNames(updated);
+    saveCustomNames(updated);
+    toast({ title: "Название сброшено" });
+  };
+
+  const groups: { key: "cap" | "box" | "flashing"; title: string; items: { id: string; name: string; description: string }[] }[] = [
+    { key: "cap", title: "Колпаки", items: getAllModels("cap").filter(m => m.id !== "custom") as any },
+    { key: "box", title: "Короба", items: getAllModels("box").filter(m => m.id !== "none") as any },
+    { key: "flashing", title: "Оклады", items: getAllModels("flashing").filter(m => m.id !== "none") as any },
   ];
 
   return (
@@ -240,7 +288,7 @@ const ProductImageManager = () => {
         <h2 className="text-lg font-bold text-foreground">Изображения изделий</h2>
       </div>
       <p className="text-sm text-muted-foreground mb-5">
-        Загрузите свои изображения для отображения в калькуляторе. PNG/JPG до 500 КБ.
+        Загрузите изображения и редактируйте названия. PNG/JPG до 500 КБ.
       </p>
       <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
 
@@ -252,41 +300,83 @@ const ProductImageManager = () => {
               const customImg = images[group.key]?.[item.id];
               const defaultImg = defaults[group.key]?.[item.id];
               const currentImg = customImg || defaultImg;
+              const customName = customNames[group.key]?.[item.id];
+              const displayName = customName?.name ?? item.name;
+              const displayDesc = customName?.description ?? item.description;
+              const isEditing = editingId === `${group.key}_${item.id}`;
               return (
-                <div key={item.id} className="flex items-center gap-3 bg-muted/50 rounded-xl p-3">
-                  <div className="w-14 h-14 rounded-lg bg-card border border-border flex items-center justify-center overflow-hidden flex-shrink-0">
-                    {currentImg ? (
-                      <img src={currentImg} alt={item.name} className="w-full h-full object-cover" />
+                <div key={item.id} className="bg-muted/50 rounded-xl p-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-14 h-14 rounded-lg bg-card border border-border flex items-center justify-center overflow-hidden flex-shrink-0">
+                      {currentImg ? (
+                        <img src={currentImg} alt={displayName} className="w-full h-full object-cover" />
+                      ) : (
+                        <Image className="w-6 h-6 text-muted-foreground" />
+                      )}
+                    </div>
+                    {isEditing ? (
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <Input
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          placeholder="Название"
+                          className="h-7 text-xs bg-background rounded-lg border-border"
+                          autoFocus
+                        />
+                        <Input
+                          value={editDesc}
+                          onChange={(e) => setEditDesc(e.target.value)}
+                          placeholder="Описание"
+                          className="h-7 text-xs bg-background rounded-lg border-border"
+                          onKeyDown={(e) => { if (e.key === "Enter") saveEdit(group.key, item.id); if (e.key === "Escape") setEditingId(null); }}
+                        />
+                      </div>
                     ) : (
-                      <Image className="w-6 h-6 text-muted-foreground" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate">{displayName}</p>
+                        <p className="text-xs text-muted-foreground truncate">{displayDesc}</p>
+                        <p className="text-[10px] text-muted-foreground/60 mt-0.5">{customImg ? "Изображение: своё" : currentImg ? "Изображение: по умолчанию" : "Нет изображения"}</p>
+                      </div>
                     )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-foreground truncate">{item.name}</p>
-                    <p className="text-xs text-muted-foreground">{customImg ? "Пользовательское" : currentImg ? "По умолчанию" : "Нет изображения"}</p>
-                  </div>
-                  <div className="flex gap-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="rounded-lg h-8 px-2"
-                      onClick={() => {
-                        setUploadTarget({ group: group.key, id: item.id });
-                        fileRef.current?.click();
-                      }}
-                    >
-                      <Upload className="w-3.5 h-3.5" />
-                    </Button>
-                    {customImg && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="rounded-lg h-8 px-2 text-destructive"
-                        onClick={() => resetImage(group.key, item.id)}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    )}
+                    <div className="flex flex-col gap-1">
+                      {isEditing ? (
+                        <>
+                          <Button variant="default" size="sm" className="rounded-lg h-7 px-2" onClick={() => saveEdit(group.key, item.id)}>
+                            <Check className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="rounded-lg h-7 px-2" onClick={() => setEditingId(null)}>
+                            <X className="w-3.5 h-3.5" />
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button variant="outline" size="sm" className="rounded-lg h-7 px-2" onClick={() => startEdit(group.key, item)}>
+                            <Pencil className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-lg h-7 px-2"
+                            onClick={() => {
+                              setUploadTarget({ group: group.key, id: item.id });
+                              fileRef.current?.click();
+                            }}
+                          >
+                            <Upload className="w-3.5 h-3.5" />
+                          </Button>
+                          {(customImg || customName) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="rounded-lg h-7 px-2 text-destructive"
+                              onClick={() => { resetImage(group.key, item.id); resetName(group.key, item.id); }}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
@@ -297,6 +387,9 @@ const ProductImageManager = () => {
     </section>
   );
 };
+
+
+
 
 // === Documentation Section ===
 const docSections = [
